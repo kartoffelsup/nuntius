@@ -53,6 +53,7 @@ dependencies {
     api("io.ktor:ktor-auth-jwt:$ktorVersion")
     api("com.querydsl:querydsl-sql:$queryDslVersion")
     api(project(":ports"))
+    api(project(":api"))
 }
 
 val generatedSourcesPath = file("src/generated/kotlin")

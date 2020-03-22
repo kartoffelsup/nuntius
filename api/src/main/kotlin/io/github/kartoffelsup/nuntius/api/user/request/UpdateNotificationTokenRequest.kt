@@ -1,4 +1,4 @@
-package io.github.kartoffelsup.nuntius.user.request
+package io.github.kartoffelsup.nuntius.api.user.request
 
 import kotlinx.serialization.Serializable
 

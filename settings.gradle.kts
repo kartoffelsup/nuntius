@@ -3,7 +3,8 @@ include(
     "application",
     "domain",
     "ports",
-    "adapters"
+    "adapters",
+    "api"
 )
 
 includeBuild("../cmd-fp-test") {

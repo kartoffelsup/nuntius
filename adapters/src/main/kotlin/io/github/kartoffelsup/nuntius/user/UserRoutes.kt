@@ -5,6 +5,13 @@ import arrow.core.Tuple3
 import arrow.core.toT
 import arrow.fx.IO
 import io.github.kartoffelsup.nuntius.NuntiusException
+import io.github.kartoffelsup.nuntius.api.user.request.CreateUserRequest
+import io.github.kartoffelsup.nuntius.api.user.request.LoginRequest
+import io.github.kartoffelsup.nuntius.api.user.request.UpdateNotificationTokenRequest
+import io.github.kartoffelsup.nuntius.api.user.result.CreateUserResult
+import io.github.kartoffelsup.nuntius.api.user.result.SuccessfulLogin
+import io.github.kartoffelsup.nuntius.api.user.result.UserContact
+import io.github.kartoffelsup.nuntius.api.user.result.UserContacts
 import io.github.kartoffelsup.nuntius.createJwt
 import io.github.kartoffelsup.nuntius.dtos.Email
 import io.github.kartoffelsup.nuntius.dtos.Password
@@ -30,23 +37,21 @@ fun Route.user(userService: UserService) {
             path = "/login",
             requestSerializer = LoginRequest.serializer(),
             resultSerializer = SuccessfulLogin.serializer()
-        ) { loginRequest, call ->
+        ) { loginRequest, _ ->
             val authRequest = Tuple2(
                 Password(loginRequest.password.toByteArray(Charsets.UTF_8)),
                 Email(loginRequest.email)
             )
             effect { userService.authenticate(authRequest) }
-                .map { authUserEither -> authUserEither.map { createJwt(it) } }
-                .map { tokenEither ->
-                    tokenEither.map {
-                        SuccessfulLogin(
-                            it.value
-                        )
+                .map { authUserEither -> authUserEither.map { it toT createJwt(it) } }
+                .map { userToToken ->
+                    userToToken.map {
+                        SuccessfulLogin(it.a.user.uuid.value, it.a.user.username.value, it.b.value)
                     }
                 }
                 .flatMap { successFulLoginEither ->
                     successFulLoginEither.fold(
-                        ifLeft = { IO.raiseError<SuccessfulLogin>(NuntiusException.NotFoundException(it)) },
+                        ifLeft = { IO.raiseError<SuccessfulLogin>(NuntiusException.NotAuthorizedException(it)) },
                         ifRight = { IO.just(it) })
                 }.bind()
         }
@@ -54,7 +59,7 @@ fun Route.user(userService: UserService) {
         postIO(
             requestSerializer = CreateUserRequest.serializer(),
             resultSerializer = CreateUserResult.serializer()
-        ) { createUserRequest, call ->
+        ) { createUserRequest, _ ->
             val request = Tuple3(
                 Password(createUserRequest.password.toByteArray()),
                 Email(createUserRequest.email),
@@ -74,12 +79,9 @@ fun Route.user(userService: UserService) {
                 requestSerializer = UpdateNotificationTokenRequest.serializer(),
                 resultSerializer = String.serializer()
             ) { notificationTokenRequest, call ->
-                // TODO: IO<E,A>
-                val principal: JWTPrincipal = !effect { call.authentication.principal<JWTPrincipal>() }
-                    ?: !raiseError<JWTPrincipal>(NuntiusException.NotAuthorizedException("Unauthorized."))
+                val userId = userId(call)
 
-                val userId = !effect { principal.payload.getClaim("id").asString() }
-                effect { userService.updateToken(UserId(userId) toT notificationTokenRequest.token) }.bind()
+                effect { userService.updateToken(userId toT notificationTokenRequest.token) }.bind()
                     .fold(ifLeft = {
                         IO.raiseError<String>(NuntiusException.NotFoundException(it))
                     }, ifRight = {
