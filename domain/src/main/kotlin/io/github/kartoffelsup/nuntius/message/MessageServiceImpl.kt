@@ -4,7 +4,6 @@ import arrow.core.Tuple3
 import io.github.kartoffelsup.nuntius.dtos.Message
 import io.github.kartoffelsup.nuntius.dtos.MessageId
 import io.github.kartoffelsup.nuntius.events.NotificationTokenRegisteredEvent
-import io.github.kartoffelsup.nuntius.events.NuntiusEventBus
 import io.github.kartoffelsup.nuntius.ports.provided.MessageQueueService
 import io.github.kartoffelsup.nuntius.ports.provided.MessageService
 import io.github.kartoffelsup.nuntius.ports.provided.UserService
@@ -16,12 +15,8 @@ import java.util.UUID
 class MessageServiceImpl(
     private val userService: UserService,
     private val notificationClient: NotificationClient,
-    private val messageQueueService: MessageQueueService,
-    nuntiusEventBus: NuntiusEventBus
+    private val messageQueueService: MessageQueueService
 ) : MessageService {
-    init {
-        nuntiusEventBus.listen(NotificationTokenRegisteredEvent::class, this::onNotificationRegistration)
-    }
 
     override suspend fun sendMessage(message: Message): MessageId {
         val tokenOfRecipient = userService.findToken(message.recipient.uuid)
@@ -40,7 +35,7 @@ class MessageServiceImpl(
         return messageId
     }
 
-    private fun onNotificationRegistration(event: NotificationTokenRegisteredEvent) {
+    fun onNotificationRegistration(event: NotificationTokenRegisteredEvent) {
         val token = event.notificationToken.token
         val user = event.notificationToken.userId
         println("$user, $token")

@@ -1,10 +1,13 @@
 package io.github.kartoffelsup.nuntius.user
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
+import arrow.core.Option
 import arrow.core.Tuple3
 import arrow.core.extensions.list.foldable.firstOption
 import com.querydsl.core.types.dsl.LiteralExpression
 import com.querydsl.sql.SQLQueryFactory
+import io.github.kartoffelsup.nuntius.dtos.Contact
 import io.github.kartoffelsup.nuntius.dtos.Email
 import io.github.kartoffelsup.nuntius.dtos.NotificationToken
 import io.github.kartoffelsup.nuntius.dtos.Password
@@ -12,7 +15,9 @@ import io.github.kartoffelsup.nuntius.dtos.User
 import io.github.kartoffelsup.nuntius.dtos.UserId
 import io.github.kartoffelsup.nuntius.dtos.Username
 import io.github.kartoffelsup.nuntius.ports.required.UserRepository
+import io.github.kartoffelsup.nuntius.sql.QUser
 import io.github.kartoffelsup.nuntius.sql.QUser.user
+import io.github.kartoffelsup.nuntius.sql.QUserContact.userContact
 import io.github.kartoffelsup.nuntius.sql.QUserNotification.userNotification
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -77,6 +82,22 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
         }
         update.execute()
         return findUserById(userToUpdate.uuid)
+    }
+
+    override suspend fun findContacts(id: UserId): Option<NonEmptyList<Contact>> {
+        val contact = QUser("contact")
+        val result = sqlQueryFactory.select(contact)
+            .from(user)
+            .innerJoin(userContact)
+            .on(userContact.userId.eq(user.uuid))
+            .innerJoin(contact)
+            .on(userContact.contactId.eq(contact.uuid))
+            .where(user.uuid.eq(id.value))
+            .fetch()
+            .map {
+                Contact(User(UserId(it.uuid), Username(it.username), Email(it.email), it.createdAt, it.lastLogin))
+            }
+        return NonEmptyList.fromList(result)
     }
 
     private suspend fun <T : Comparable<T>> findUser(

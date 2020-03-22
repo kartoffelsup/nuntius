@@ -1,8 +1,10 @@
 package io.github.kartoffelsup.nuntius.ports.required
 
 import arrow.core.Either
-import arrow.core.Tuple2
+import arrow.core.NonEmptyList
+import arrow.core.Option
 import arrow.core.Tuple3
+import io.github.kartoffelsup.nuntius.dtos.Contact
 import io.github.kartoffelsup.nuntius.dtos.Email
 import io.github.kartoffelsup.nuntius.dtos.NotificationToken
 import io.github.kartoffelsup.nuntius.dtos.Password
@@ -16,5 +18,6 @@ interface UserRepository {
     suspend fun saveUser(pwMailUsername: Tuple3<Password, Email, Username>): Either<String, User>
     suspend fun findUserNotificationToken(id: UserId): Either<String, NotificationToken>
     suspend fun updateToken(userId: UserId, token: String): Either<String, NotificationToken>
-    suspend fun updateUser(user: User): Either<String, User>
+    suspend fun updateUser(userToUpdate: User): Either<String, User>
+    suspend fun findContacts(id: UserId): Option<NonEmptyList<Contact>>
 }
