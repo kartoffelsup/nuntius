@@ -11,8 +11,8 @@ class FirebaseClient(firebase: FirebaseApp) : NotificationClient {
     override suspend fun notify(token: NotificationToken, payload: Map<String, String>) {
         firebaseMessaging.send(
             Message.builder()
-                .putData("test", "test")
-                .setToken("test")
+                .putAllData(payload)
+                .setToken(token.token)
                 .build()
         )
     }
