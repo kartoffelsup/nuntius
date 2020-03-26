@@ -1,10 +1,9 @@
 package io.github.kartoffelsup.nuntius.events
 
+import arrow.Kind
 import kotlin.reflect.KClass
 
-typealias EventListener<T> = (T) -> Unit
-
-interface NuntiusEventBus {
-    fun <T : Any> send(event: T)
-    fun <T : Any> listen(type: KClass<T>, listener: EventListener<T>)
+interface NuntiusEventBus<F> {
+    fun <T : Any> send(event: T): Kind<F, Unit>
+    fun <T : Any> listen(type: KClass<T>): Kind<F, T>
 }

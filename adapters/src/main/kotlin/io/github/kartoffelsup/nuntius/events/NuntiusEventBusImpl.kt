@@ -1,38 +1,34 @@
 package io.github.kartoffelsup.nuntius.events
 
-import java.util.Collections
+import arrow.Kind
+import arrow.fx.Queue
+import arrow.fx.typeclasses.Concurrent
 import kotlin.reflect.KClass
 
-private class Event(val type: KClass<*>, val event: Any)
+fun <F> NuntiusEventBus(CF: Concurrent<F>): Kind<F, NuntiusEventBus<F>> = CF.run {
+    Ref(emptyMap<KClass<*>, List<Queue<F, Any>>>()).map { ref ->
+        object : NuntiusEventBus<F> {
+            override fun <T : Any> send(event: T): Kind<F, Unit> =
+                ref.get().map { it[event::class] }.flatMap { qs ->
+                    qs?.map { queue ->
+                        queue.offer(event)
+                    }?.parSequence()?.unit() ?: unit()
+                }
 
-class NuntiusEventBusImpl() : NuntiusEventBus {
-    private val queue: MutableList<Event> = mutableListOf()
-    private val listeners: MutableMap<KClass<*>, MutableList<EventListener<Any>>> =
-        Collections.synchronizedMap(mutableMapOf())
-
-    override fun <T : Any> send(event: T) {
-        queue.add(Event(event::class, event))
-        processQueue()
-    }
-
-    override fun <T : Any> listen(type: KClass<T>, listener: EventListener<T>) {
-        listeners.compute(type) { t: KClass<*>, u: MutableList<EventListener<Any>>? ->
-            val l = u ?: mutableListOf()
-            (listener as? EventListener<Any>)?. let { l.add(it) }
-            l
+            override fun <T : Any> listen(type: KClass<T>): Kind<F, T> =
+                Queue.bounded<F, Any>(1, CF).flatMap { q ->
+                    ref.update { types -> types.update(type) { it + q } }
+                        .followedBy(q.take().map { event -> event as T })
+                }
         }
-        processQueue()
     }
+}
 
-    private fun processQueue() {
-       queue.removeAll { event ->
-           val found = listeners.filter {
-               it.key == event.type
-           }
-           found.forEach { (_, u) ->
-               u.forEach { it(event.event) }
-           }
-           found.isNotEmpty()
-       }
-    }
+private fun <F> Map<KClass<*>, List<Queue<F, Any>>>.update(
+    key: KClass<*>,
+    update: (List<Queue<F, Any>>) -> List<Queue<F, Any>>
+): Map<KClass<*>, List<Queue<F, Any>>> {
+    val original = get(key) ?: emptyList()
+    val new = update(original)
+    return this + Pair(key, new)
 }

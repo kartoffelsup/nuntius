@@ -21,12 +21,9 @@ import io.ktor.request.receiveText
 import io.ktor.response.respond
 import io.ktor.response.respondText
 import io.ktor.routing.Route
-import io.ktor.routing.get
-import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.routing.routing
 import kotlinx.serialization.KSerializer
-import java.io.PipedOutputStream
 
 fun Application.routes(userService: UserService, messageService: MessageService) {
     routing {
@@ -39,9 +36,8 @@ fun Application.routes(userService: UserService, messageService: MessageService)
 
 suspend fun ConcurrentSyntax<ForIO>.principal(call: ApplicationCall): JWTPrincipal {
     // TODO: IO<E,A>
-    val principal: JWTPrincipal = !effect { call.authentication.principal<JWTPrincipal>() }
+    return !effect { call.authentication.principal<JWTPrincipal>() }
         ?: !raiseError<JWTPrincipal>(NuntiusException.NotAuthorizedException("Unauthorized."))
-    return principal
 }
 
 suspend fun ConcurrentSyntax<ForIO>.userId(call: ApplicationCall): UserId {

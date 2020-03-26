@@ -1,6 +1,5 @@
 package io.github.kartoffelsup.nuntius.message
 
-import arrow.core.Option
 import arrow.fx.IO
 import io.github.kartoffelsup.nuntius.NuntiusException
 import io.github.kartoffelsup.nuntius.api.message.request.SendMessageRequest
@@ -45,7 +44,7 @@ fun Route.message(userService: UserService, messageService: MessageService) {
                     sendTimestamp = null,
                     receiveTimestamp = null,
                     deliveryTimestamp = null,
-                    attachments = Option.empty()
+                    attachments = emptyList()
                 )
 
                 val messageId = !effect { messageService.sendMessage(message) }

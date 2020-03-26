@@ -17,14 +17,13 @@ import io.github.kartoffelsup.nuntius.dtos.User
 import io.github.kartoffelsup.nuntius.dtos.UserId
 import io.github.kartoffelsup.nuntius.dtos.Username
 import io.github.kartoffelsup.nuntius.events.NotificationTokenRegisteredEvent
-import io.github.kartoffelsup.nuntius.events.NuntiusEventBus
 import io.github.kartoffelsup.nuntius.ports.provided.UserService
 import io.github.kartoffelsup.nuntius.ports.required.UserRepository
 import io.github.kartoffelsup.nuntius.sha512
 import java.time.ZonedDateTime
 
 class UserServiceImpl(
-    private val eventBus: NuntiusEventBus,
+    private val eventHandler: suspend (NotificationTokenRegisteredEvent) -> Unit,
     private val userRepository: UserRepository
 ) : UserService {
     override suspend fun authenticate(request: Tuple2<Password, Email>): Either<String, AuthenticatedUser> {
@@ -46,7 +45,7 @@ class UserServiceImpl(
         val (userId, token) = request
         return userRepository.updateToken(userId, token)
             .fold(ifLeft = { it.left() }, ifRight = {
-                eventBus.send(NotificationTokenRegisteredEvent(it))
+                eventHandler(NotificationTokenRegisteredEvent(it))
                 it.right()
             })
     }

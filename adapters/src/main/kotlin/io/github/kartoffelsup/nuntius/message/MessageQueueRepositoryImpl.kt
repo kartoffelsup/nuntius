@@ -1,8 +1,12 @@
 package io.github.kartoffelsup.nuntius.message
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
+import arrow.core.Option
+import arrow.core.Tuple2
 import arrow.core.Tuple3
 import arrow.core.extensions.list.foldable.firstOption
+import arrow.core.toT
 import com.querydsl.sql.SQLQueryFactory
 import io.github.kartoffelsup.nuntius.dtos.Message
 import io.github.kartoffelsup.nuntius.dtos.MessageId
@@ -25,9 +29,33 @@ class MessageQueueRepositoryImpl(
             .set(messageQueue.sender, message.sender.uuid.value)
             .set(messageQueue.recipient, message.recipient.uuid.value)
             .set(messageQueue.timeOfServerArrival, arrival)
-            .set(messageQueue.payload, stringFormat.stringify(Message.serializer(), message).toByteArray(Charsets.UTF_8))
+            .set(
+                messageQueue.payload,
+                stringFormat.stringify(Message.serializer(), message).toByteArray(Charsets.UTF_8)
+            )
             .execute()
         return findOne(messageId)
+    }
+
+    override suspend fun findQueuedMessages(userId: UserId): Option<NonEmptyList<Tuple2<MessageId, Message>>> {
+        val messages = sqlQueryFactory.select(messageQueue)
+            .from(messageQueue)
+            .where(messageQueue.recipient.eq(userId.value))
+            .fetch()
+            .map {
+                MessageId(it.messageId) toT stringFormat.parse(
+                    Message.serializer(),
+                    it.payload.toString(Charsets.UTF_8)
+                )
+            }
+
+        return NonEmptyList.fromList(messages)
+    }
+
+    override suspend fun remove(messageId: MessageId) {
+        sqlQueryFactory.delete(messageQueue)
+            .where(messageQueue.messageId.eq(messageId.value))
+            .execute()
     }
 
     private suspend fun findOne(messageId: MessageId): Either<String, QueuedMessage> {
