@@ -11,8 +11,8 @@ buildscript {
     }
 
     dependencies {
-        val queryDslVersion: String by extra
-        val postgresVersion: String by extra
+        val queryDslVersion: String by rootProject.extra
+        val postgresVersion: String by rootProject.extra
 
         classpath("io.github.kartoffelsup:querydsl-sql-codegen-gradle-plugin:0.0.3-SNAPSHOT") {
             exclude("com.querydsl", "querydsl-sql-codegen")
@@ -32,12 +32,12 @@ plugins {
 }
 
 dependencies {
-    val arrowVersion: String by extra
-    val ktorVersion: String by extra
-    val queryDslVersion: String by extra
-    val firebaseAdminVersion: String by extra
-    val kotlinxSerializationVersion: String by extra
-    val javaxAnnotationApiVersion: String by extra
+    val arrowVersion: String by rootProject.extra
+    val ktorVersion: String by rootProject.extra
+    val queryDslVersion: String by rootProject.extra
+    val firebaseAdminVersion: String by rootProject.extra
+    val kotlinxSerializationVersion: String by rootProject.extra
+    val javaxAnnotationApiVersion: String by rootProject.extra
 
     api("io.arrow-kt:arrow-fx:$arrowVersion")
     api("io.arrow-kt:arrow-syntax:$arrowVersion")

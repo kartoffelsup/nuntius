@@ -27,9 +27,11 @@ import kotlinx.serialization.KSerializer
 
 fun Application.routes(userService: UserService, messageService: MessageService) {
     routing {
-        user(userService)
-        authenticate {
-            message(userService, messageService)
+        route("/api/") {
+            user(userService)
+            authenticate {
+                message(userService, messageService)
+            }
         }
     }
 }

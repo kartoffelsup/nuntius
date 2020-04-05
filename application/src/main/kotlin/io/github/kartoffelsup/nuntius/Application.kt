@@ -38,6 +38,7 @@ import io.ktor.application.install
 import io.ktor.auth.Authentication
 import io.ktor.auth.jwt.JWTPrincipal
 import io.ktor.auth.jwt.jwt
+import io.ktor.features.CORS
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import java.io.FileInputStream
@@ -81,6 +82,9 @@ suspend fun main(args: Array<String>): Unit = IO.fx {
                         if (credential.payload.audience.contains("nuntius")) JWTPrincipal(credential.payload) else null
                     }
                 }
+            }
+            install(CORS) {
+                host("localhost:9000")
             }
             routes(
                 userService,

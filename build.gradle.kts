@@ -1,30 +1,34 @@
 plugins {
-    kotlin("jvm") version "1.3.70"
+    kotlin("jvm") version "1.3.71"
 }
 
 group = "io.github.kartoffelsup"
 version = "1.0-SNAPSHOT"
 
-allprojects {
-    apply {
-        plugin("kotlin")
-    }
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
 
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
-
-    tasks {
-        compileKotlin {
-            kotlinOptions.jvmTarget = "1.8"
+subprojects {
+    if (project.name !in listOf("web-app", "api", "client")) {
+        apply { plugin("kotlin") }
+        repositories {
+            mavenLocal()
+            mavenCentral()
         }
-        compileTestKotlin {
-            kotlinOptions.jvmTarget = "1.8"
-        }
-    }
 
-    dependencies {
-        implementation(kotlin("stdlib-jdk8"))
+        tasks {
+            compileKotlin {
+                kotlinOptions.jvmTarget = "1.8"
+            }
+            compileTestKotlin {
+                kotlinOptions.jvmTarget = "1.8"
+            }
+        }
+
+        dependencies {
+            implementation(kotlin("stdlib-jdk8"))
+        }
     }
 }

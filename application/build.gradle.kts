@@ -1,9 +1,9 @@
 dependencies {
-    val ktorVersion: String by extra
-    val gsonVersion: String by extra
-    val postgresVersion: String by extra
-    val hikariVersion: String by extra
-    val log4jVersion: String by extra
+    val ktorVersion: String by rootProject.extra
+    val gsonVersion: String by rootProject.extra
+    val postgresVersion: String by rootProject.extra
+    val hikariVersion: String by rootProject.extra
+    val log4jVersion: String by rootProject.extra
 
     implementation("com.google.code.gson:gson:$gsonVersion")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
