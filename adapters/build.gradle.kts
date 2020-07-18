@@ -19,7 +19,6 @@ buildscript {
         }
         classpath("com.querydsl:querydsl-sql-codegen:$queryDslVersion")
         classpath("org.postgresql:postgresql:$postgresVersion")
-        classpath("io.github.kartoffelsup:kotlin-querydsl-sql-codegen:0.0.1-SNAPSHOT")
     }
 }
 
@@ -28,7 +27,7 @@ apply {
 }
 
 plugins {
-    kotlin("plugin.serialization") version "1.3.70"
+    kotlin("plugin.serialization") version "1.3.72"
 }
 
 dependencies {

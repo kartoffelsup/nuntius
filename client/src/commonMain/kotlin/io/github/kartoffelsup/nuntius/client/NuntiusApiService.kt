@@ -7,7 +7,7 @@ sealed class ApiResult
 data class Success<T>(val payload: T) : ApiResult()
 data class Failure(val reason: String) : ApiResult()
 
-class NuntiusApiService(private val client: NuntiusHttpClient, private val jsonx: Json) {
+class NuntiusApiService(private val endpoint: String, private val client: NuntiusHttpClient, private val jsonx: Json) {
     suspend fun <A, B> post(
         path: String,
         request: A,
@@ -39,7 +39,7 @@ class NuntiusApiService(private val client: NuntiusHttpClient, private val jsonx
             }
         }
         val httpRequest = NuntiusHttpRequest(
-            path = "http://localhost:9000/api/$path",
+            path = "$endpoint/api/$path",
             method = method,
             body = body
         )

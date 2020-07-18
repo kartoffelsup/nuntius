@@ -25,12 +25,13 @@ dependencies {
     val coroutinesVersion: String by rootProject.extra
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$kotlinxSerializationVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.7.1")
 
     // KT JS
-    implementation("org.jetbrains:kotlin-react:16.13.0-pre.94-kotlin-1.3.70")
-    implementation("org.jetbrains:kotlin-react-dom:16.13.0-pre.94-kotlin-1.3.70")
-    implementation("org.jetbrains:kotlin-react-router-dom:4.3.1-pre.94-kotlin-1.3.70")
-    implementation("org.jetbrains:kotlin-styled:1.0.0-pre.94-kotlin-1.3.70")
+    implementation("org.jetbrains:kotlin-react:16.13.1-pre.110-kotlin-1.3.72")
+    implementation("org.jetbrains:kotlin-react-dom:16.13.1-pre.110-kotlin-1.3.72")
+    implementation("org.jetbrains:kotlin-react-router-dom:5.1.2-pre.110-kotlin-1.3.72")
+    implementation("org.jetbrains:kotlin-styled:1.0.0-pre.110-kotlin-1.3.72")
 
     // CSS
     implementation(npm("styled-components"))

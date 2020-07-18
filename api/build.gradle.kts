@@ -1,6 +1,6 @@
 plugins {
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version "1.3.70"
+    kotlin("plugin.serialization") version ("1.3.72")
     id("maven-publish")
 }
 
@@ -10,7 +10,13 @@ repositories {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        mavenPublication {
+            artifactId = "nuntius-api-jvm"
+            groupId = "io.github.kartoffelsup"
+            version = "0.0.1-SNAPSHOT"
+        }
+    }
     js {
         browser()
     }
