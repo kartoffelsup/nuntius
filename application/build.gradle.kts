@@ -11,6 +11,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("io.github.kartoffelsup:argparsing")
     implementation("com.google.guava:guava:$guavaVersion")
+    implementation(kotlin("reflect"))
 
     implementation(project(":adapters"))
     implementation(project(":domain"))

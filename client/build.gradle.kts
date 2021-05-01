@@ -49,6 +49,8 @@ kotlin {
             }
 
             dependencies {
+                // Implicitly declare to force 1.5.0 version that kotest doesn't use yet
+                implementation(kotlin("reflect"))
                 implementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
                 implementation("io.kotest:kotest-assertions-core-jvm:$kotestVersion")
                 implementation("io.kotest:kotest-property-jvm:$kotestVersion")

@@ -7,4 +7,4 @@ fun sha512(payload: ByteArray): Sha512Hashed =
         MessageDigest.getInstance("SHA-512").also { it.update(payload) }.digest()
     )
 
-inline class Sha512Hashed(val payload: ByteArray)
+class Sha512Hashed(val payload: ByteArray)

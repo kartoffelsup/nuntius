@@ -1,3 +1,5 @@
+package view
+
 import kotlinx.html.js.onClickFunction
 import react.RBuilder
 import react.RHandler
@@ -27,5 +29,5 @@ private val home = functionalComponent<RProps> {
 }
 
 fun RBuilder.home(handler: RHandler<RProps>): ReactElement {
-    return child(functionalComponent = home, handler = handler)
+    return child(home, handler = handler)
 }

@@ -32,4 +32,4 @@ fun createJwt(authUser: AuthenticatedUser): Jwt {
     )
 }
 
-inline class Jwt(val value: String)
+class Jwt(val value: String)

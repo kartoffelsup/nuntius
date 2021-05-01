@@ -1,9 +1,7 @@
-package nav
+package view.nav
 
-import home
 import io.github.kartoffelsup.nuntius.client.NuntiusApiService
 import kotlinx.coroutines.CoroutineScope
-import login.loginForm
 import react.RBuilder
 import react.RComponent
 import react.RProps
@@ -17,18 +15,23 @@ import react.router.dom.hashRouter
 import react.router.dom.navLink
 import react.router.dom.route
 import react.router.dom.switch
+import service.user.UserService
+import view.home
+import view.login.loginForm
 
 interface SidebarProps : RProps {
     var coroutineScope: CoroutineScope
     var nuntiusApi: NuntiusApiService
+    var userService: UserService
 }
 
 class Sidebar : RComponent<SidebarProps, RState>() {
+
     override fun RBuilder.render() {
         hashRouter {
             nav(classes = "sidebar") {
                 ul(classes = "mdc-list") {
-                    navLink(to = "/") {
+                    navLink<RProps>(to = "/") {
                         li(classes = "mdc-list-item") {
                             span(classes = "mdc-list-item__graphic material-icons") {
                                 +"home"
@@ -38,8 +41,8 @@ class Sidebar : RComponent<SidebarProps, RState>() {
                             }
                         }
                     }
-                    navLink(
-                        to = "/login",
+                    navLink<RProps>(
+                        to = "/view/login",
                         activeClassName = "mdc-ripple-upgraded mdc-ripple-upgraded--background-focused"
                     ) {
                         li(classes = "mdc-list-item") {
@@ -54,9 +57,8 @@ class Sidebar : RComponent<SidebarProps, RState>() {
                 }
             }
             switch {
-                route(path = "/login") {
-                    loginForm(props.coroutineScope, props.nuntiusApi) {
-                    }
+                route(path = "/view/login") {
+                    loginForm(props.coroutineScope, props.userService) {}
                 }
                 route(path = "/", exact = true) {
                     home {}
@@ -69,12 +71,14 @@ class Sidebar : RComponent<SidebarProps, RState>() {
 fun RBuilder.sidebar(
     coroutineScope: CoroutineScope,
     nuntiusApiService: NuntiusApiService,
+    userService: UserService,
     handler: SidebarProps.() -> Unit
 ): ReactElement {
     return child(Sidebar::class) {
         this.attrs {
             this.coroutineScope = coroutineScope
             this.nuntiusApi = nuntiusApiService
+            this.userService = userService
             handler()
         }
     }

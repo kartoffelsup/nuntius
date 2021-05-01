@@ -1,5 +1,6 @@
 import io.github.kartoffelsup.nuntius.client.NuntiusApiService
 import io.github.kartoffelsup.nuntius.client.NuntiusHttpClient
+import kotlinx.browser.document
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.css.BorderStyle
@@ -17,13 +18,12 @@ import kotlinx.css.gridTemplateRows
 import kotlinx.css.minHeight
 import kotlinx.css.properties.border
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonConfiguration
-import login.loginFormStyles
 import react.buildElement
 import react.dom.render
-import styled.StyledComponents
+import service.user.UserService
 import styled.injectGlobal
-import kotlin.browser.document
+import view.App
+import view.login.loginFormStyles
 import kotlin.coroutines.CoroutineContext
 
 val styles = CSSBuilder().apply {
@@ -83,11 +83,12 @@ val styles = CSSBuilder().apply {
     loginFormStyles()
 }
 
-val jsonx: Json by lazy { Json(JsonConfiguration.Stable) }
+val jsonx: Json by lazy { Json {} }
 
 private class Application : CoroutineScope {
     override val coroutineContext: CoroutineContext = Job()
-    private val nuntiusApi: NuntiusApiService = NuntiusApiService(NuntiusHttpClient(), jsonx)
+    private val nuntiusApi: NuntiusApiService = NuntiusApiService("http://localhost:8080", NuntiusHttpClient(), jsonx)
+    private val userService: UserService = UserService(nuntiusApi)
 
     fun start() {
         document.getElementById("root")?.let {
@@ -95,6 +96,7 @@ private class Application : CoroutineScope {
                 child(App::class) {
                     attrs.coroutineScope = this@Application
                     attrs.nuntiusApi = nuntiusApi
+                    attrs.userService = userService
                 }
             }, it)
         }
@@ -105,7 +107,7 @@ fun main() {
     js("require('@material/list/dist/mdc.list.min.css')")
     js("require('@material/textfield/dist/mdc.textfield.min.css')")
     js("require('@material/button/dist/mdc.button.min.css')")
-    StyledComponents.injectGlobal(styles.toString())
+    injectGlobal(styles.toString())
 
     Application().start()
 }

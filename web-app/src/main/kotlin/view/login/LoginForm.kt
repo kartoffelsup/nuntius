@@ -1,23 +1,17 @@
-package login
+package view.login
 
-import form.formField
-import io.github.kartoffelsup.nuntius.api.user.request.LoginRequest
 import io.github.kartoffelsup.nuntius.api.user.result.FailedLogin
 import io.github.kartoffelsup.nuntius.api.user.result.LoginResult
 import io.github.kartoffelsup.nuntius.api.user.result.SuccessfulLogin
-import io.github.kartoffelsup.nuntius.client.Failure
-import io.github.kartoffelsup.nuntius.client.NuntiusApiService
-import io.github.kartoffelsup.nuntius.client.Success
+import jsonx
+import kotlinx.browser.localStorage
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.await
 import kotlinx.coroutines.launch
-import kotlinx.css.Align
 import kotlinx.css.CSSBuilder
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.JustifyContent
 import kotlinx.css.LinearDimension
-import kotlinx.css.alignSelf
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
@@ -35,13 +29,15 @@ import react.RProps
 import react.ReactElement
 import react.child
 import react.dom.button
+import react.dom.div
 import react.dom.form
 import react.dom.i
 import react.dom.span
 import react.functionalComponent
 import react.useEffect
 import react.useState
-import kotlin.js.Promise
+import service.user.UserService
+import view.form.formField
 
 fun CSSBuilder.loginFormStyles() {
     +"login-form" {
@@ -54,11 +50,17 @@ fun CSSBuilder.loginFormStyles() {
         children {
             flex(1.0)
             margin(LinearDimension("5px"))
-            lastChild {
-                maxWidth = LinearDimension("50%")
-                minWidth = LinearDimension("30%")
-                alignSelf = Align.flexEnd
-            }
+        }
+
+        child(".form-submit") {
+            maxWidth = LinearDimension("50%")
+            minWidth = LinearDimension("30%")
+
+        }
+
+        child(".form-login-error") {
+            minWidth = LinearDimension("30%")
+            put("color", "var(--mdc-theme-error)")
         }
     }
 }
@@ -74,39 +76,40 @@ private val loginForm = functionalComponent<LoginFormProps> { props ->
     val (emailValid, setEmailValid) = useState(false)
     val (passwordValid, setPasswordValid) = useState(false)
     val (formSubmit, setFormSubmit) = useState(FormSubmit())
+    val (loginError, setLoginError) = useState("")
     useEffect(listOf(formSubmit)) {
         val login: suspend () -> LoginResult = suspend {
             val mail = formSubmit.email!!
             val password = formSubmit.password!!
-            val request = LoginRequest(mail, password)
-            Promise.Companion.resolve("").await()
-            val response =
-                props.nuntiusApi.post<LoginRequest, SuccessfulLogin>(
-                    "/user/login",
-                    request,
-                    LoginRequest.serializer(),
-                    SuccessfulLogin.serializer()
-                )
-            when (response) {
-                is Success<*> -> response.payload as SuccessfulLogin
-                is Failure -> FailedLogin(response.reason)
-            }
+            props.userService.login(mail, password)
         }
         if (formSubmit.submit) {
+            setLoginError("")
             props.coroutineScope.launch {
-                val loginResult: LoginResult = login()
-                console.log(loginResult)
+                when (val result = login()) {
+                    is SuccessfulLogin -> {
+                        localStorage.setItem("nuntius-user", jsonx.encodeToString(SuccessfulLogin.serializer(), result))
+                    }
+                    is FailedLogin -> {
+                        setFormSubmit(formSubmit.copy(submit = false))
+                        setLoginError(result.message)
+                    }
+                }
             }
         }
     }
 
     form(classes = "login-form") {
+        val (email, setEmail) = useState("")
+        val (password, setPassword) = useState("")
         formField {
             attrs {
                 inputType = InputType.email
                 name = "email"
                 label = "E-Mail"
                 classes = "form-field"
+                value = email
+                setValue = setEmail
                 validate = { value ->
                     when {
                         value.isEmpty() -> {
@@ -134,6 +137,8 @@ private val loginForm = functionalComponent<LoginFormProps> { props ->
                 name = "password"
                 label = "Password"
                 classes = "form-field"
+                value = password
+                setValue = setPassword
                 validate = { value ->
                     when {
                         value.isEmpty() -> {
@@ -141,10 +146,10 @@ private val loginForm = functionalComponent<LoginFormProps> { props ->
                             setFormValid(false)
                             "Password is required"
                         }
-                        value.length < 5 -> {
+                        value.length < 4 -> {
                             setPasswordValid(false)
                             setFormValid(false)
-                            "Password must at least be 5 characters"
+                            "Password must at least be 4 characters"
                         }
                         else -> {
                             setPasswordValid(true)
@@ -155,11 +160,17 @@ private val loginForm = functionalComponent<LoginFormProps> { props ->
                 }
             }
         }
-        button(classes = "form-submit mdc-button mdc-button--unelevated demo-button-shaped", type = ButtonType.button) {
+        div(classes = "form-login-error mdc-theme--error") {
+            +loginError
+        }
+        button(
+            classes = "form-submit mdc-button mdc-button--unelevated demo-button-shaped",
+            type = ButtonType.button
+        ) {
             attrs {
-                disabled = !formValid
+                disabled = !formValid || formSubmit.submit
                 onClickFunction = {
-                    setFormSubmit(FormSubmit("email", "password", true))
+                    setFormSubmit(FormSubmit(email, password, true))
                 }
             }
             span(classes = "mdc-button__ripple") {}
@@ -171,15 +182,15 @@ private val loginForm = functionalComponent<LoginFormProps> { props ->
 
 external interface LoginFormProps : RProps {
     var coroutineScope: CoroutineScope
-    var nuntiusApi: NuntiusApiService
+    var userService: UserService
 }
 
 fun RBuilder.loginForm(
     coroutineScope: CoroutineScope,
-    nuntiusApi: NuntiusApiService, handler: RHandler<LoginFormProps>
+    userService: UserService, handler: RHandler<LoginFormProps>
 ): ReactElement {
-    return child(functionalComponent = loginForm) {
-        attrs.nuntiusApi = nuntiusApi
+    return child(loginForm) {
+        attrs.userService = userService
         attrs.coroutineScope = coroutineScope
         handler()
     }

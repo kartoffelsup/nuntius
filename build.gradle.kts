@@ -22,7 +22,6 @@ subprojects {
             compileKotlin {
                 kotlinOptions {
                     jvmTarget = "11"
-                    freeCompilerArgs += "-Xinline-classes"
                 }
             }
             compileTestKotlin {

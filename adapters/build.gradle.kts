@@ -2,7 +2,6 @@ import com.querydsl.sql.Configuration
 import com.querydsl.sql.PostgreSQLTemplates
 import com.querydsl.sql.types.JSR310ZonedDateTimeType
 import io.github.kartoffelsup.querydsl.sql.codegen.GenerateQueryDslSqlSources
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.postgresql.ds.PGSimpleDataSource
 
 buildscript {
@@ -41,6 +40,7 @@ dependencies {
     api("io.arrow-kt:arrow-core:$arrowVersion")
     api("io.arrow-kt:arrow-fx-coroutines:$arrowVersion")
     implementation("io.ktor:ktor-server-core:$ktorVersion")
+    implementation(kotlin("reflect"))
 
     implementation("javax.annotation:javax.annotation-api:$javaxAnnotationApiVersion")
 
@@ -90,9 +90,4 @@ tasks {
 
         customizer.set { this.setBeanSuffix("Bean") }
     }
-}
-
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions {
-    freeCompilerArgs = listOf("-XXLanguage:+InlineClasses")
 }
