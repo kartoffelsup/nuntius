@@ -3,8 +3,8 @@ package io.github.kartoffelsup.nuntius.user
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.Option
-import arrow.core.Tuple3
-import arrow.core.extensions.list.foldable.firstOption
+import arrow.core.right
+import arrow.core.rightIfNotNull
 import com.querydsl.core.types.dsl.LiteralExpression
 import com.querydsl.sql.SQLQueryFactory
 import io.github.kartoffelsup.nuntius.dtos.Contact
@@ -30,7 +30,7 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
     override suspend fun findUserByEmail(email: Email): Either<String, User> =
         findUser(user.email, email.value)
 
-    override suspend fun saveUser(pwMailUsername: Tuple3<Password, Email, Username>): Either<String, User> {
+    override suspend fun saveUser(pwMailUsername: Triple<Password, Email, Username>): Either<String, User> {
         val (pw, mail, username) = pwMailUsername
         val uuid = UUID.randomUUID().toString()
         sqlQueryFactory.insert(user)
@@ -49,9 +49,9 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
             .from(userNotification)
             .where(userNotification.userId.eq(id.value))
             .fetch()
-            .firstOption()
-            .map { NotificationToken(UserId(it.userId), it.token, it.updatedAt) }
-            .toEither { "Unable to find a Token for user: '$id'" }
+            .firstOrNull()
+            ?.let { NotificationToken(UserId(it.userId), it.token, it.updatedAt) }
+            .rightIfNotNull { "Unable to find a Token for user: '$id'" }
     }
 
     override suspend fun updateToken(userId: UserId, token: String): Either<String, NotificationToken> {
@@ -69,7 +69,7 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
                 .where(userNotification.userId.eq(userId.value))
                 .execute()
         }
-        return Either.right(NotificationToken(userId, token, now))
+        return NotificationToken(userId, token, now).right()
     }
 
     override suspend fun updateUser(userToUpdate: User): Either<String, User> {
@@ -119,6 +119,7 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
                     password = Password(it.pw)
                 }
             }
-            .firstOption().toEither { "User with '$path=$value' not found." }
+            .firstOrNull()
+            .rightIfNotNull { "User with '$path=$value' not found." }
     }
 }

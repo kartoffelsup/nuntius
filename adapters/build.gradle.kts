@@ -27,7 +27,7 @@ apply {
 }
 
 plugins {
-    kotlin("plugin.serialization") version "1.3.72"
+    kotlin("plugin.serialization") version "1.5.0"
 }
 
 dependencies {
@@ -38,13 +38,14 @@ dependencies {
     val kotlinxSerializationVersion: String by rootProject.extra
     val javaxAnnotationApiVersion: String by rootProject.extra
 
-    api("io.arrow-kt:arrow-fx:$arrowVersion")
-    api("io.arrow-kt:arrow-syntax:$arrowVersion")
+    api("io.arrow-kt:arrow-core:$arrowVersion")
+    api("io.arrow-kt:arrow-fx-coroutines:$arrowVersion")
     implementation("io.ktor:ktor-server-core:$ktorVersion")
 
     implementation("javax.annotation:javax.annotation-api:$javaxAnnotationApiVersion")
 
-    api("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlinxSerializationVersion")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:$kotlinxSerializationVersion")
     api("com.google.firebase:firebase-admin:$firebaseAdminVersion") {
         exclude(group = "io.netty")
         exclude(group = "com.fasterxml.jackson.core")

@@ -1,6 +1,6 @@
 package io.github.kartoffelsup.nuntius.message
 
-import arrow.fx.IO
+import arrow.core.computations.either
 import io.github.kartoffelsup.nuntius.NuntiusException
 import io.github.kartoffelsup.nuntius.api.message.request.SendMessageRequest
 import io.github.kartoffelsup.nuntius.api.message.result.SendMessageResult
@@ -20,36 +20,27 @@ fun Route.message(userService: UserService, messageService: MessageService) {
             requestSerializer = SendMessageRequest.serializer(),
             resultSerializer = SendMessageResult.serializer(),
             body = { request, call ->
-                val senderId = userId(call)
-
-                val recipientId = request.recipient
-                val sender = !effect { userService.findUser(senderId) }
-                    .flatMap { senderEither ->
-                        senderEither.fold(
-                            ifLeft = { IO.raiseError<User>(NuntiusException.NotFoundException(it)) },
-                            ifRight = { IO.just(it) })
-                    }
-
-                val recipient = !effect { userService.findUser(UserId(recipientId)) }
-                    .flatMap { recipientEither ->
-                        recipientEither.fold(
-                            ifLeft = { IO.raiseError<User>(NuntiusException.NotFoundException(it)) },
-                            ifRight = { IO.just(it) })
-                    }
-
-                val message = Message(
-                    request.text,
-                    sender,
-                    recipient,
-                    sendTimestamp = null,
-                    receiveTimestamp = null,
-                    deliveryTimestamp = null,
-                    attachments = emptyList()
-                )
-
-                val messageId = !effect { messageService.sendMessage(message) }
-
-                SendMessageResult(messageId.value)
+                either {
+                    val senderId = userId(call).bind()
+                    val recipientId = request.recipient
+                    val sender: User = userService.findUser(senderId)
+                        .mapLeft { NuntiusException.NotFoundException(it) }
+                        .bind()
+                    val recipient: User = userService.findUser(UserId(recipientId))
+                        .mapLeft { NuntiusException.NotFoundException(it) }
+                        .bind()
+                    val message = Message(
+                        request.text,
+                        sender,
+                        recipient,
+                        sendTimestamp = null,
+                        receiveTimestamp = null,
+                        deliveryTimestamp = null,
+                        attachments = emptyList()
+                    )
+                    val messageId = messageService.sendMessage(message)
+                    SendMessageResult(messageId.value)
+                }
             }
         )
     }

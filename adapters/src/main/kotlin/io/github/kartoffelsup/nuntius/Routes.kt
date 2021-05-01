@@ -1,9 +1,9 @@
 package io.github.kartoffelsup.nuntius
 
-import arrow.fx.ForIO
-import arrow.fx.IO
-import arrow.fx.extensions.fx
-import arrow.fx.typeclasses.ConcurrentSyntax
+import arrow.core.Either
+import arrow.core.flatMap
+import arrow.core.flatten
+import arrow.core.rightIfNotNull
 import io.github.kartoffelsup.nuntius.dtos.UserId
 import io.github.kartoffelsup.nuntius.message.message
 import io.github.kartoffelsup.nuntius.ports.provided.MessageService
@@ -36,32 +36,33 @@ fun Application.routes(userService: UserService, messageService: MessageService)
     }
 }
 
-suspend fun ConcurrentSyntax<ForIO>.principal(call: ApplicationCall): JWTPrincipal {
-    // TODO: IO<E,A>
-    return !effect { call.authentication.principal<JWTPrincipal>() }
-        ?: !raiseError<JWTPrincipal>(NuntiusException.NotAuthorizedException("Unauthorized."))
+suspend fun extractPrincipal(call: ApplicationCall): Either<NuntiusException, JWTPrincipal> {
+    return call.authentication.principal<JWTPrincipal>()
+        .rightIfNotNull { NuntiusException.NotAuthorizedException("Unauthorized.") }
 }
 
-suspend fun ConcurrentSyntax<ForIO>.userId(call: ApplicationCall): UserId {
-    val principal = principal(call)
-    return principal.payload.getClaim("id").asString()?.let { UserId(it) }
-        ?: raiseError<UserId>(NuntiusException.NotAuthorizedException("Invalid token.")).bind()
+suspend fun userId(call: ApplicationCall): Either<NuntiusException, UserId> {
+    return extractPrincipal(call).flatMap { principal: JWTPrincipal ->
+        principal.payload.getClaim("id").asString()?.let { UserId(it) }
+            .rightIfNotNull { NuntiusException.NotAuthorizedException("Invalid token.") }
+    }
 }
 
 fun <A, B> Route.postIO(
     path: String = "",
     requestSerializer: KSerializer<A>,
     resultSerializer: KSerializer<B>,
-    body: suspend ConcurrentSyntax<ForIO>.(A, ApplicationCall) -> B
+    body: suspend (A, ApplicationCall) -> Either<Throwable, B>
 ) {
     routeIO(path,
         requestSerializer,
         resultSerializer,
         method = HttpMethod.Post,
-        body = {request, call ->
+        body = { request: A?, call: ApplicationCall ->
             request?.let {
                 body(request, call)
-            } ?: !raiseError<B>(IllegalStateException("Request was null."))
+            }.rightIfNotNull { IllegalStateException("Request was null.") }
+                .flatten()
         }
     )
 }
@@ -69,52 +70,48 @@ fun <A, B> Route.postIO(
 fun <B> Route.getIO(
     path: String = "",
     resultSerializer: KSerializer<B>,
-    body: suspend ConcurrentSyntax<ForIO>.(ApplicationCall) -> B
+    body: suspend (ApplicationCall) -> Either<Throwable, B>
 ) {
     routeIO(path,
         requestSerializer = null,
-        method= HttpMethod.Get,
+        method = HttpMethod.Get,
         resultSerializer = resultSerializer,
-        body = {_: Unit?, call -> body(call)}
+        body = { _: Unit?, call -> body(call) }
     )
 }
 
 private inline fun <A, B> Route.routeIO(
     path: String = "",
     requestSerializer: KSerializer<A>?,
-    resultSerializer: KSerializer<B>,
+    resultSerializer: KSerializer<B>?,
     method: HttpMethod,
-    crossinline body: suspend ConcurrentSyntax<ForIO>.(A?, ApplicationCall) -> B
+    crossinline body: suspend (A?, ApplicationCall) -> Either<Throwable, B>
 ) {
     route(path, method) {
         handle {
-            IO.fx {
-                    val requestBean = requestSerializer?.let {
-                        !effect { json.parse(requestSerializer, call.receiveText()) }
-                    }
-                    body(requestBean, call)
-                }
-                .map { json.stringify(resultSerializer, it) }
-                .attempt()
-                .flatMap {
-                    IO {
-                        it.fold(
-                            // TODO IO<E, A> in arrow 0.11?
-                            ifLeft = {
-                                val (status, message) = when (it) {
-                                    is NuntiusException -> it.statusCode to it.message
-                                    is IllegalArgumentException -> HttpStatusCode.BadRequest to (it.message ?: "")
-                                    else -> {
-                                        it.printStackTrace()
-                                        HttpStatusCode.InternalServerError to "Internal Error. Contact the Administrators."}
-                                }
-                                call.respond(status, message)
-                            },
-                            ifRight = { call.respondText(it) }
-                        )
-                    }
-                }
-                .suspended()
+            val requestBean: Either<Throwable, A?> = requestSerializer?.let {
+                call.receiveText().takeIf { it.isNotBlank() }
+                    ?.let { Either.catch { json.decodeFromString(requestSerializer, it) } }
+                    .rightIfNotNull { IllegalArgumentException("A valid json body is required.") }
+                    .flatten()
+            } ?: Either.Right(null)
+
+            requestBean.flatMap { body(it, call) }
+                .map { resultBody -> resultSerializer?.let { json.encodeToString(resultSerializer, resultBody) } }
+                .fold(
+                    ifLeft = {
+                        val (status, message) = when (it) {
+                            is NuntiusException -> it.statusCode to it.message
+                            is IllegalArgumentException -> HttpStatusCode.BadRequest to (it.message ?: "")
+                            else -> {
+                                it.printStackTrace()
+                                HttpStatusCode.InternalServerError to "Internal Error. Contact the Administrators."
+                            }
+                        }
+                        call.respond(status, message)
+                    },
+                    ifRight = { it?.let { call.respondText(it) } }
+                )
         }
     }
 }
@@ -123,5 +120,6 @@ sealed class NuntiusException(val statusCode: HttpStatusCode) : RuntimeException
     abstract override val message: String
 
     class NotFoundException(override val message: String) : NuntiusException(statusCode = HttpStatusCode.NotFound)
-    class NotAuthorizedException(override val message: String): NuntiusException(statusCode = HttpStatusCode.Unauthorized)
+    class NotAuthorizedException(override val message: String) :
+        NuntiusException(statusCode = HttpStatusCode.Unauthorized)
 }

@@ -3,10 +3,7 @@ package io.github.kartoffelsup.nuntius.message
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.Option
-import arrow.core.Tuple2
-import arrow.core.Tuple3
-import arrow.core.extensions.list.foldable.firstOption
-import arrow.core.toT
+import arrow.core.rightIfNotNull
 import com.querydsl.sql.SQLQueryFactory
 import io.github.kartoffelsup.nuntius.dtos.Message
 import io.github.kartoffelsup.nuntius.dtos.MessageId
@@ -22,7 +19,7 @@ class MessageQueueRepositoryImpl(
     private val sqlQueryFactory: SQLQueryFactory
 ) : MessageQueueRepository {
 
-    override suspend fun save(idArrivalMessage: Tuple3<MessageId, ZonedDateTime, Message>): Either<String, QueuedMessage> {
+    override suspend fun save(idArrivalMessage: Triple<MessageId, ZonedDateTime, Message>): Either<String, QueuedMessage> {
         val (messageId, arrival, message) = idArrivalMessage
         sqlQueryFactory.insert(messageQueue)
             .set(messageQueue.messageId, messageId.value)
@@ -31,19 +28,19 @@ class MessageQueueRepositoryImpl(
             .set(messageQueue.timeOfServerArrival, arrival)
             .set(
                 messageQueue.payload,
-                stringFormat.stringify(Message.serializer(), message).toByteArray(Charsets.UTF_8)
+                stringFormat.encodeToString(Message.serializer(), message).toByteArray(Charsets.UTF_8)
             )
             .execute()
         return findOne(messageId)
     }
 
-    override suspend fun findQueuedMessages(userId: UserId): Option<NonEmptyList<Tuple2<MessageId, Message>>> {
+    override suspend fun findQueuedMessages(userId: UserId): Option<NonEmptyList<Pair<MessageId, Message>>> {
         val messages = sqlQueryFactory.select(messageQueue)
             .from(messageQueue)
             .where(messageQueue.recipient.eq(userId.value))
             .fetch()
             .map {
-                MessageId(it.messageId) toT stringFormat.parse(
+                MessageId(it.messageId) to stringFormat.decodeFromString(
                     Message.serializer(),
                     it.payload.toString(Charsets.UTF_8)
                 )
@@ -63,7 +60,8 @@ class MessageQueueRepositoryImpl(
             .from(messageQueue)
             .where(messageQueue.messageId.eq(messageId.value))
             .fetch()
-            .firstOption()
+            .firstOrNull()
+            .rightIfNotNull { "Unable to find a queued message with id: $messageId" }
             .map { bean ->
                 QueuedMessage(
                     MessageId(bean.messageId),
@@ -73,6 +71,5 @@ class MessageQueueRepositoryImpl(
                     bean.payload.toString(Charsets.UTF_8)
                 )
             }
-            .toEither { "Unable to find a queued message with id: $messageId" }
     }
 }

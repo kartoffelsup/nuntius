@@ -3,8 +3,6 @@ package io.github.kartoffelsup.nuntius.user
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.Option
-import arrow.core.Tuple2
-import arrow.core.Tuple3
 import arrow.core.left
 import arrow.core.right
 import io.github.kartoffelsup.nuntius.Sha512Hashed
@@ -26,7 +24,7 @@ class UserServiceImpl(
     private val eventHandler: suspend (NotificationTokenRegisteredEvent) -> Unit,
     private val userRepository: UserRepository
 ) : UserService {
-    override suspend fun authenticate(request: Tuple2<Password, Email>): Either<String, AuthenticatedUser> {
+    override suspend fun authenticate(request: Pair<Password, Email>): Either<String, AuthenticatedUser> {
         val (providedPassword, email) = request
         val findUser: Either<String, User> = userRepository.findUserByEmail(email)
         return findUser.fold(
@@ -35,13 +33,13 @@ class UserServiceImpl(
         )
     }
 
-    override suspend fun createUser(request: Tuple3<Password, Email, Username>): Either<String, User> {
+    override suspend fun createUser(request: Triple<Password, Email, Username>): Either<String, User> {
         val (pass, email, username) = request
         val hashedPw: Sha512Hashed = hashPw(pass, email)
-        return userRepository.saveUser(Tuple3(Password(hashedPw.payload), email, username))
+        return userRepository.saveUser(Triple(Password(hashedPw.payload), email, username))
     }
 
-    override suspend fun updateToken(request: Tuple2<UserId, String>): Either<String, NotificationToken> {
+    override suspend fun updateToken(request: Pair<UserId, String>): Either<String, NotificationToken> {
         val (userId, token) = request
         return userRepository.updateToken(userId, token)
             .fold(ifLeft = { it.left() }, ifRight = {

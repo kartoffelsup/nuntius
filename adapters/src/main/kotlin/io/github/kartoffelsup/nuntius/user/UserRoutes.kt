@@ -1,10 +1,8 @@
 package io.github.kartoffelsup.nuntius.user
 
-import arrow.core.Tuple2
-import arrow.core.Tuple3
+import arrow.core.Either
+import arrow.core.flatMap
 import arrow.core.getOrElse
-import arrow.core.toT
-import arrow.fx.IO
 import io.github.kartoffelsup.nuntius.NuntiusException
 import io.github.kartoffelsup.nuntius.api.user.request.CreateUserRequest
 import io.github.kartoffelsup.nuntius.api.user.request.LoginRequest
@@ -16,6 +14,7 @@ import io.github.kartoffelsup.nuntius.api.user.result.UserContacts
 import io.github.kartoffelsup.nuntius.createJwt
 import io.github.kartoffelsup.nuntius.dtos.Email
 import io.github.kartoffelsup.nuntius.dtos.Password
+import io.github.kartoffelsup.nuntius.dtos.UserId
 import io.github.kartoffelsup.nuntius.dtos.Username
 import io.github.kartoffelsup.nuntius.getIO
 import io.github.kartoffelsup.nuntius.ports.provided.UserService
@@ -33,39 +32,30 @@ fun Route.user(userService: UserService) {
             requestSerializer = LoginRequest.serializer(),
             resultSerializer = SuccessfulLogin.serializer()
         ) { loginRequest, _ ->
-            val authRequest = Tuple2(
+            val authRequest = Pair(
                 Password(loginRequest.password.toByteArray(Charsets.UTF_8)),
                 Email(loginRequest.email)
             )
-            effect { userService.authenticate(authRequest) }
-                .map { authUserEither -> authUserEither.map { it toT createJwt(it) } }
-                .map { userToToken ->
-                    userToToken.map {
-                        SuccessfulLogin(it.a.user.uuid.value, it.a.user.username.value, it.b.value)
-                    }
+            userService.authenticate(authRequest)
+                .map { it to createJwt(it) }
+                .map {
+                    SuccessfulLogin(it.first.user.uuid.value, it.first.user.username.value, it.second.value)
                 }
-                .flatMap { successFulLoginEither ->
-                    successFulLoginEither.fold(
-                        ifLeft = { IO.raiseError<SuccessfulLogin>(NuntiusException.NotAuthorizedException(it)) },
-                        ifRight = { IO.just(it) })
-                }.bind()
+                .mapLeft { NuntiusException.NotAuthorizedException(it) }
         }
 
         postIO(
             requestSerializer = CreateUserRequest.serializer(),
             resultSerializer = CreateUserResult.serializer()
         ) { createUserRequest, _ ->
-            val request = Tuple3(
+            val request = Triple(
                 Password(createUserRequest.password.toByteArray()),
                 Email(createUserRequest.email),
                 Username(createUserRequest.username)
             )
-            effect { userService.createUser(request) }.bind()
+            userService.createUser(request)
                 .map { CreateUserResult(it.uuid.value) }
-                .fold(
-                    ifLeft = { IO.raiseError<CreateUserResult>(NuntiusException.NotFoundException(it)) },
-                    ifRight = { IO.just(it) }
-                ).bind()
+                .mapLeft { NuntiusException.NotFoundException(it) }
         }
 
         authenticate {
@@ -74,29 +64,28 @@ fun Route.user(userService: UserService) {
                 requestSerializer = UpdateNotificationTokenRequest.serializer(),
                 resultSerializer = String.serializer()
             ) { notificationTokenRequest, call ->
-                val userId = userId(call)
-
-                effect { userService.updateToken(userId toT notificationTokenRequest.token) }.bind()
-                    .fold(ifLeft = {
-                        IO.raiseError<String>(NuntiusException.NotFoundException(it))
-                    }, ifRight = {
-                        IO.just("Success.")
-                    }).bind()
+                val userId: Either<NuntiusException, UserId> = userId(call)
+                userId.flatMap {
+                    userService.updateToken(it to notificationTokenRequest.token)
+                        .mapLeft { message: String ->
+                            NuntiusException.NotFoundException(message)
+                        }
+                }.map { "Success" }
             }
 
             getIO(
                 "/contacts",
                 UserContacts.serializer()
             ) { call ->
-                val userId = userId(call)
-                val contacts = !effect { userService.findContacts(userId) }
-                UserContacts(contacts
-                    .map { it.toList() }
-                    .getOrElse { listOf() }
-                    .map {
-                        UserContact(it.user.uuid.value, it.user.username.value)
-                    }
-                )
+                val userId: Either<NuntiusException, UserId> = userId(call)
+                userId.map {
+                    UserContacts(userService.findContacts(it).map { it.toList() }
+                        .getOrElse { listOf() }
+                        .map {
+                            UserContact(it.user.uuid.value, it.user.username.value)
+                        }
+                    )
+                }
             }
         }
     }

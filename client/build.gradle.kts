@@ -1,6 +1,6 @@
 plugins {
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version "1.3.70"
+    kotlin("plugin.serialization") version ("1.5.0")
     id("maven-publish")
 }
 
@@ -14,34 +14,52 @@ kotlin {
         mavenPublication {
             artifactId = "nuntius-api-client-jvm"
             groupId = "io.github.kartoffelsup"
-            version = "0.0.1-SNAPSHOT"
+            version = "0.0.2-SNAPSHOT"
         }
     }
     js {
         browser()
+        useCommonJs()
     }
     sourceSets {
         val kotlinxSerializationVersion: String by rootProject.extra
         val okHttpVersion: String by rootProject.extra
         val coroutinesVersion: String by rootProject.extra
+        val kotestVersion: String by rootProject.extra
+        val junitVersion: String by rootProject.extra
 
         val commonMain by getting {
             dependencies {
-                api("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$kotlinxSerializationVersion")
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$coroutinesVersion")
+                api("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                api("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
             }
         }
         val jvmMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
-                api("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlinxSerializationVersion")
                 implementation("com.squareup.okhttp3:okhttp:$okHttpVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:$kotlinxSerializationVersion")
+            }
+        }
+        val jvmTest by getting {
+            tasks.withType<Test> {
+                useJUnitPlatform()
+            }
+
+            dependencies {
+                implementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
+                implementation("io.kotest:kotest-assertions-core-jvm:$kotestVersion")
+                implementation("io.kotest:kotest-property-jvm:$kotestVersion")
+                implementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
+                implementation("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+                implementation("org.mock-server:mockserver-netty:5.10")
             }
         }
         val jsMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-js"))
-                api("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$kotlinxSerializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$coroutinesVersion")
             }
         }

@@ -13,7 +13,7 @@ actual class NuntiusHttpClient {
             .method(request.method.name, request.body?.toRequestBody(request.headers["Content-Type"]?.toMediaType()))
             .url(request.path)
         request.headers.forEach { (key, value) ->
-            request.addHeader(key, value)
+            requestBuilder.addHeader(key, value)
         }
         val response: Response = okHttpClient.newCall(
             requestBuilder

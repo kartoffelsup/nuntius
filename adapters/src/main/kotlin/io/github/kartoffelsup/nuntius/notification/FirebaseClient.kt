@@ -18,7 +18,7 @@ class FirebaseClient(firebase: FirebaseApp) : NotificationClient {
         }
         firebaseMessaging.send(
             Message.builder()
-                .putData("data", json.stringify(MessageNotificationDto.serializer(), dto))
+                .putData("data", json.encodeToString(MessageNotificationDto.serializer(), dto))
                 .setToken(token.token)
                 .build()
         )

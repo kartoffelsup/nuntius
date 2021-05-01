@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.3.72"
+    kotlin("jvm") version "1.5.0"
 }
 
 group = "io.github.kartoffelsup"
@@ -20,10 +20,15 @@ subprojects {
 
         tasks {
             compileKotlin {
-                kotlinOptions.jvmTarget = "1.8"
+                kotlinOptions {
+                    jvmTarget = "11"
+                    freeCompilerArgs += "-Xinline-classes"
+                }
             }
             compileTestKotlin {
-                kotlinOptions.jvmTarget = "1.8"
+                kotlinOptions {
+                    jvmTarget = "11"
+                }
             }
         }
 

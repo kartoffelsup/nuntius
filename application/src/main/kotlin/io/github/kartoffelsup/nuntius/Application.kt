@@ -1,18 +1,11 @@
 package io.github.kartoffelsup.nuntius
 
 import arrow.core.Either
-import arrow.core.Tuple2
-import arrow.core.extensions.either.applicativeError.applicativeError
-import arrow.core.extensions.fx
+import arrow.core.computations.either
 import arrow.core.getOrHandle
-import arrow.core.toT
-import arrow.fx.ForIO
-import arrow.fx.IO
-import arrow.fx.extensions.fx
-import arrow.fx.extensions.io.concurrent.concurrent
-import arrow.fx.extensions.io.dispatchers.dispatchers
-import arrow.fx.typeclasses.seconds
 import com.google.auth.oauth2.GoogleCredentials
+import com.google.common.eventbus.EventBus
+import com.google.common.eventbus.Subscribe
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.querydsl.sql.Configuration
@@ -26,7 +19,6 @@ import io.github.kartoffelsup.argparsing.ArgParserError
 import io.github.kartoffelsup.argparsing.longOption
 import io.github.kartoffelsup.argparsing.shortOption
 import io.github.kartoffelsup.nuntius.events.NotificationTokenRegisteredEvent
-import io.github.kartoffelsup.nuntius.events.NuntiusEventBus
 import io.github.kartoffelsup.nuntius.message.MessageQueueRepositoryImpl
 import io.github.kartoffelsup.nuntius.message.MessageQueueServiceImpl
 import io.github.kartoffelsup.nuntius.message.MessageServiceImpl
@@ -38,66 +30,61 @@ import io.ktor.application.install
 import io.ktor.auth.Authentication
 import io.ktor.auth.jwt.JWTPrincipal
 import io.ktor.auth.jwt.jwt
-import io.ktor.features.CORS
+import io.ktor.features.AutoHeadResponse
+import io.ktor.features.CallLogging
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import kotlinx.coroutines.runBlocking
 import java.io.FileInputStream
 import javax.sql.DataSource
 import kotlin.system.exitProcess
 
-suspend fun main(args: Array<String>): Unit = IO.fx {
-    val (ds: DataSource, options: FirebaseOptions) = !effect { config(args) }
-    val queryFactory = !effect {
+suspend fun main(args: Array<String>): Unit {
+    val (ds: DataSource, options: FirebaseOptions) = config(args)
+    val queryFactory =
         SQLQueryFactory(Configuration(PostgreSQLTemplates()).apply {
             register("user", "created_at", JSR310ZonedDateTimeType())
             register("user", "last_login", JSR310ZonedDateTimeType())
             register("user_notification", "updated_at", JSR310ZonedDateTimeType())
             register("message_queue", "time_of_server_arrival", JSR310ZonedDateTimeType())
         }, ds)
-    }
 
-    val firebase = !effect { FirebaseApp.initializeApp(options) }
-    val eventBus: NuntiusEventBus<ForIO> = !NuntiusEventBus(IO.concurrent())
 
-    val producer: suspend (NotificationTokenRegisteredEvent) -> Unit = {
-        IO.fx {
-            eventBus.send(it).bind()
-            !effect { println("sent event") }
-        }.suspended()
-    }
+    val firebase = FirebaseApp.initializeApp(options)
+    val eventBus = EventBus()
 
+    val producer: suspend (NotificationTokenRegisteredEvent) -> Unit = { eventBus.post(it) }
     val userService = UserServiceImpl(producer, UserRepositoryImpl(queryFactory))
     val messageQueueService = MessageQueueServiceImpl(MessageQueueRepositoryImpl(json, queryFactory))
     val messageService = MessageServiceImpl(userService, FirebaseClient(firebase), messageQueueService)
+    eventBus.register(DeliverEvent(messageService))
 
-    !deliverEvents(eventBus, messageService).fork(IO.dispatchers().io())
-
-    !effect {
-        embeddedServer(Netty, 8080) {
-            install(Authentication) {
-                jwt {
-                    realm = "nuntius"
-                    verifier(jwtVerifier)
-                    validate { credential ->
-                        if (credential.payload.audience.contains("nuntius")) JWTPrincipal(credential.payload) else null
-                    }
+    embeddedServer(Netty, 8080) {
+        install(AutoHeadResponse)
+//        install(CORS) {
+//            host("localhost:9000")
+//            header("content-type")
+//        }
+        install(Authentication) {
+            jwt {
+                realm = "nuntius"
+                verifier(jwtVerifier)
+                validate { credential ->
+                    if (credential.payload.audience.contains("nuntius")) JWTPrincipal(credential.payload) else null
                 }
             }
-            install(CORS) {
-                host("localhost:9000")
-            }
-            routes(
-                userService,
-                messageService
-            )
-        }.start(wait = true)
-    }
-    Unit
-}.suspended()
+        }
+        install(CallLogging)
+        routes(
+            userService,
+            messageService
+        )
+    }.start(wait = true)
+}
 
-private suspend fun config(args: Array<String>): Tuple2<DataSource, FirebaseOptions> {
-    val argParser = ArgParser(Either.applicativeError(), args)
-    return Either.fx<ArgParserError, Tuple2<DataSource, FirebaseOptions>> {
+private suspend fun config(args: Array<String>): Pair<DataSource, FirebaseOptions> {
+    val argParser = ArgParser(args)
+    val c: Either<ArgParserError, Pair<DataSource, FirebaseOptions>> = either {
         val user = argParser.value("dbu".shortOption(), "database-user".longOption()).bind()
         val db = argParser.value("db".shortOption(), "database".longOption()).bind()
         val dbHost = argParser.value("dbh".shortOption(), "database-host".longOption()).bind()
@@ -109,31 +96,26 @@ private suspend fun config(args: Array<String>): Tuple2<DataSource, FirebaseOpti
             it.jdbcUrl = "jdbc:postgresql://$dbHost/$db"
             it.username = user
             it.password = pw
-            it.initializationFailTimeout = 0
+            it.initializationFailTimeout = 1
         })
 
         val serviceAccount = FileInputStream(fb)
-        val options = FirebaseOptions.Builder()
+        val options = FirebaseOptions.builder()
             .setCredentials(serviceAccount.use { GoogleCredentials.fromStream(it) })
             .setDatabaseUrl(fbUrl)
             .build()
 
-        ds toT options
-    }.getOrHandle { err: ArgParserError ->
+        ds to options
+    }
+    return c.getOrHandle { err: ArgParserError ->
         System.err.println(err.message)
         exitProcess(1)
     }
 }
 
-fun deliverEvents(
-    eventBus: NuntiusEventBus<ForIO>,
-    consumer: MessageService
-): IO<Unit> = IO.fx {
-    !effect { println("Start listening") }
-    val event: NotificationTokenRegisteredEvent = !eventBus.listen(NotificationTokenRegisteredEvent::class)
-    !effect { println("Received event") }
-    !effect { consumer.onNotificationRegistration(event) }
-    !effect { println("delivered event") }
-    !IO.sleep(5.seconds)
-    !deliverEvents(eventBus, consumer)
+class DeliverEvent(private val messageService: MessageService) {
+    @Subscribe
+    fun onNotificationRegistered(notificationTokenRegisteredEvent: NotificationTokenRegisteredEvent) =
+        runBlocking { messageService.onNotificationRegistration(notificationTokenRegisteredEvent) }
 }
+

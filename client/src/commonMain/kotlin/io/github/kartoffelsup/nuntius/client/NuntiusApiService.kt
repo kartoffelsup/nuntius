@@ -35,7 +35,7 @@ class NuntiusApiService(private val endpoint: String, private val client: Nuntiu
         }
         val body: String? = requestSerializer?.let {
             request?.let {
-                jsonx.stringify(requestSerializer, request)
+                jsonx.encodeToString(requestSerializer, request)
             }
         }
         val httpRequest = NuntiusHttpRequest(
@@ -53,7 +53,7 @@ class NuntiusApiService(private val endpoint: String, private val client: Nuntiu
         val response: NuntiusHttpResponse = client.request(httpRequest)
         val payload = response.body
         return if (response.isSuccess) {
-            Success(jsonx.parse(responseSerializer, payload))
+            Success(jsonx.decodeFromString(responseSerializer, payload))
         } else {
             Failure(payload)
         }

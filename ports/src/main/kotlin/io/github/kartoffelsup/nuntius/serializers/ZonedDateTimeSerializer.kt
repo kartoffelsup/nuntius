@@ -1,23 +1,27 @@
 package io.github.kartoffelsup.nuntius.serializers
 
-import kotlinx.serialization.Decoder
-import kotlinx.serialization.Encoder
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-@Serializer(forClass = ZonedDateTime::class)
 object ZonedDateTimeSerializer :
     KSerializer<ZonedDateTime> {
     private val format = DateTimeFormatter.ISO_ZONED_DATE_TIME
+
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("ZonedDateTime", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: ZonedDateTime) {
         encoder.encodeString(format.format(value))
     }
 
     override fun deserialize(decoder: Decoder): ZonedDateTime {
-        return ZonedDateTime.parse(decoder.decodeString(),
+        return ZonedDateTime.parse(
+            decoder.decodeString(),
             format
         )
     }

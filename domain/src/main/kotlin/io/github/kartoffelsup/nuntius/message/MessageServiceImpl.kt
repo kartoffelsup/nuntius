@@ -1,6 +1,5 @@
 package io.github.kartoffelsup.nuntius.message
 
-import arrow.core.Tuple3
 import io.github.kartoffelsup.nuntius.dtos.Message
 import io.github.kartoffelsup.nuntius.dtos.MessageId
 import io.github.kartoffelsup.nuntius.dtos.MessageNotification
@@ -26,7 +25,7 @@ class MessageServiceImpl(
         tokenOfRecipient.fold(
             ifLeft = {
                 val timestamp = ZonedDateTime.now(ZoneOffset.UTC)
-                messageQueueService.enqueue(Tuple3(messageId, timestamp, message))
+                messageQueueService.enqueue(Triple(messageId, timestamp, message))
             },
             ifRight = { token -> notificationClient.notify(token, notification) }
         )
@@ -38,8 +37,8 @@ class MessageServiceImpl(
         val messages = messageQueueService.findQueuedMessages(user)
         messages.fold({}, {
             it.toList().forEach { idToMessage ->
-                sendMessage(idToMessage.b)
-                messageQueueService.remove(idToMessage.a)
+                sendMessage(idToMessage.second)
+                messageQueueService.remove(idToMessage.first)
             }
         })
     }
