@@ -5,6 +5,8 @@ import arrow.core.NonEmptyList
 import arrow.core.Option
 import arrow.core.right
 import arrow.core.rightIfNotNull
+import arrow.core.toNonEmptyListOrNull
+import arrow.core.toOption
 import com.querydsl.core.types.dsl.LiteralExpression
 import com.querydsl.sql.SQLQueryFactory
 import io.github.kartoffelsup.nuntius.dtos.Contact
@@ -15,30 +17,30 @@ import io.github.kartoffelsup.nuntius.dtos.User
 import io.github.kartoffelsup.nuntius.dtos.UserId
 import io.github.kartoffelsup.nuntius.dtos.Username
 import io.github.kartoffelsup.nuntius.ports.required.UserRepository
-import io.github.kartoffelsup.nuntius.sql.QUser
-import io.github.kartoffelsup.nuntius.sql.QUser.user
+import io.github.kartoffelsup.nuntius.sql.QNuntiusUser
+import io.github.kartoffelsup.nuntius.sql.QNuntiusUser.nuntiusUser
 import io.github.kartoffelsup.nuntius.sql.QUserContact.userContact
 import io.github.kartoffelsup.nuntius.sql.QUserNotification.userNotification
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRepository {
     override suspend fun findUserById(id: UserId): Either<String, User> =
-        findUser(user.uuid, id.value)
+        findUser(nuntiusUser.uuid, id.value)
 
     override suspend fun findUserByEmail(email: Email): Either<String, User> =
-        findUser(user.email, email.value)
+        findUser(nuntiusUser.email, email.value)
 
     override suspend fun saveUser(pwMailUsername: Triple<Password, Email, Username>): Either<String, User> {
         val (pw, mail, username) = pwMailUsername
         val uuid = UUID.randomUUID().toString()
-        sqlQueryFactory.insert(user)
-            .set(user.username, username.value)
-            .set(user.pw, pw.value)
-            .set(user.email, mail.value)
-            .set(user.uuid, uuid)
-            .set(user.createdAt, ZonedDateTime.now(ZoneOffset.UTC))
+        sqlQueryFactory.insert(nuntiusUser)
+            .set(nuntiusUser.username, username.value)
+            .set(nuntiusUser.pw, pw.value)
+            .set(nuntiusUser.email, mail.value)
+            .set(nuntiusUser.uuid, uuid)
+            .set(nuntiusUser.createdAt, ZonedDateTime.now(ZoneOffset.UTC))
             .execute()
 
         return findUserById(UserId(uuid))
@@ -73,39 +75,39 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
     }
 
     override suspend fun updateUser(userToUpdate: User): Either<String, User> {
-        val update = sqlQueryFactory.update(user)
-            .where(user.uuid.eq(userToUpdate.uuid.value))
-            .set(user.username, userToUpdate.username.value)
+        val update = sqlQueryFactory.update(nuntiusUser)
+            .where(nuntiusUser.uuid.eq(userToUpdate.uuid.value))
+            .set(nuntiusUser.username, userToUpdate.username.value)
 
         userToUpdate.lastLogin?.let {
-            update.set(user.lastLogin, it)
+            update.set(nuntiusUser.lastLogin, it)
         }
         update.execute()
         return findUserById(userToUpdate.uuid)
     }
 
     override suspend fun findContacts(id: UserId): Option<NonEmptyList<Contact>> {
-        val contact = QUser("contact")
+        val contact = QNuntiusUser("contact")
         val result = sqlQueryFactory.select(contact)
-            .from(user)
+            .from(nuntiusUser)
             .innerJoin(userContact)
-            .on(userContact.userId.eq(user.uuid))
+            .on(userContact.userId.eq(nuntiusUser.uuid))
             .innerJoin(contact)
             .on(userContact.contactId.eq(contact.uuid))
-            .where(user.uuid.eq(id.value))
+            .where(nuntiusUser.uuid.eq(id.value))
             .fetch()
             .map {
                 Contact(User(UserId(it.uuid), Username(it.username), Email(it.email), it.createdAt, it.lastLogin))
             }
-        return NonEmptyList.fromList(result)
+        return result.toNonEmptyListOrNull().toOption()
     }
 
     private suspend fun <T : Comparable<T>> findUser(
         path: LiteralExpression<T>,
         value: T
     ): Either<String, User> {
-        return sqlQueryFactory.select(user)
-            .from(user)
+        return sqlQueryFactory.select(nuntiusUser)
+            .from(nuntiusUser)
             .where(path.eq(value))
             .fetch()
             .map {

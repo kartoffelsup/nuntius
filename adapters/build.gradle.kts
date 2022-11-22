@@ -26,7 +26,7 @@ apply {
 }
 
 plugins {
-    kotlin("plugin.serialization") version "1.5.0"
+    kotlin("plugin.serialization") version "1.7.21"
 }
 
 dependencies {
@@ -50,7 +50,7 @@ dependencies {
         exclude(group = "io.netty")
         exclude(group = "com.fasterxml.jackson.core")
     }
-    api("io.ktor:ktor-auth-jwt:$ktorVersion")
+    api("io.ktor:ktor-server-auth-jwt-jvm:$ktorVersion")
     api("com.querydsl:querydsl-sql:$queryDslVersion")
     api(project(":ports"))
     api(project(":api"))
@@ -82,10 +82,11 @@ tasks {
         beanPackageName.set("io.github.kartoffelsup.nuntius.bean")
         dataSource.set(ds)
         configuration.set(Configuration(PostgreSQLTemplates()).apply {
-            register("user", "created_at", JSR310ZonedDateTimeType())
-            register("user", "last_login", JSR310ZonedDateTimeType())
+            register("nuntius_user", "created_at", JSR310ZonedDateTimeType())
+            register("nuntius_user", "last_login", JSR310ZonedDateTimeType())
             register("user_notification", "updated_at", JSR310ZonedDateTimeType())
             register("message_queue", "time_of_server_arrival", JSR310ZonedDateTimeType())
+
         })
 
         customizer.set { this.setBeanSuffix("Bean") }

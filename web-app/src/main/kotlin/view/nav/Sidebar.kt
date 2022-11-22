@@ -1,85 +1,80 @@
 package view.nav
 
+import csstype.ClassName
 import io.github.kartoffelsup.nuntius.client.NuntiusApiService
 import kotlinx.coroutines.CoroutineScope
-import react.RBuilder
-import react.RComponent
-import react.RProps
-import react.RState
-import react.ReactElement
-import react.dom.li
-import react.dom.nav
-import react.dom.span
-import react.dom.ul
-import react.router.dom.hashRouter
-import react.router.dom.navLink
-import react.router.dom.route
-import react.router.dom.switch
+import react.FC
+import react.Props
+import react.create
+import react.dom.html.ReactHTML.li
+import react.dom.html.ReactHTML.nav
+import react.dom.html.ReactHTML.span
+import react.dom.html.ReactHTML.ul
+import react.router.Route
+import react.router.Routes
+import react.router.dom.HashRouter
+import react.router.dom.NavLink
 import service.user.UserService
-import view.home
-import view.login.loginForm
+import view.Home
+import view.login.LoginForm
 
-interface SidebarProps : RProps {
+interface SidebarProps : Props {
     var coroutineScope: CoroutineScope
     var nuntiusApi: NuntiusApiService
     var userService: UserService
 }
 
-class Sidebar : RComponent<SidebarProps, RState>() {
-
-    override fun RBuilder.render() {
-        hashRouter {
-            nav(classes = "sidebar") {
-                ul(classes = "mdc-list") {
-                    navLink<RProps>(to = "/") {
-                        li(classes = "mdc-list-item") {
-                            span(classes = "mdc-list-item__graphic material-icons") {
-                                +"home"
-                            }
-                            span(classes = "mdc-list-item__text") {
-                                +"Home"
-                            }
+val Sidebar = FC<SidebarProps> { props ->
+    HashRouter {
+        nav {
+            className = ClassName("sidebar")
+            ul {
+                className = ClassName("mdc-list")
+                NavLink {
+                    to = "/"
+                    li {
+                        className = ClassName("mdc-list-item")
+                        span {
+                            className = ClassName("mdc-list-item__graphic material-icons")
+                            +"home"
                         }
-                    }
-                    navLink<RProps>(
-                        to = "/view/login",
-                        activeClassName = "mdc-ripple-upgraded mdc-ripple-upgraded--background-focused"
-                    ) {
-                        li(classes = "mdc-list-item") {
-                            span(classes = "mdc-list-item__graphic material-icons") {
-                                +"person"
-                            }
-                            span(classes = "mdc-list-item__text") {
-                                +"Login"
-                            }
+                        span {
+                            className = ClassName("mdc-list-item__text")
+                            +"Home"
                         }
                     }
                 }
-            }
-            switch {
-                route(path = "/view/login") {
-                    loginForm(props.coroutineScope, props.userService) {}
-                }
-                route(path = "/", exact = true) {
-                    home {}
+                NavLink {
+                    to = "/view/login"
+                    className = ClassName("mdc-ripple-upgraded mdc-ripple-upgraded--background-focused")
+                    li {
+                        className = ClassName("mdc-list-item")
+                        span {
+                            className = ClassName("mdc-list-item__graphic material-icons")
+                            +"person"
+                        }
+                        span {
+                            className = ClassName("\"mdc-list-item__text\"")
+                            +"Login"
+                        }
+                    }
                 }
             }
         }
-    }
-}
+        Routes {
+            Route {
+                path = "/view/login"
+                element = LoginForm.create() {
+                    coroutineScope = props.coroutineScope
+                    userService = props.userService
+                }
+            }
+            Route {
+                path = "/"
+                element = Home.create() {
 
-fun RBuilder.sidebar(
-    coroutineScope: CoroutineScope,
-    nuntiusApiService: NuntiusApiService,
-    userService: UserService,
-    handler: SidebarProps.() -> Unit
-): ReactElement {
-    return child(Sidebar::class) {
-        this.attrs {
-            this.coroutineScope = coroutineScope
-            this.nuntiusApi = nuntiusApiService
-            this.userService = userService
-            handler()
+                }
+            }
         }
     }
 }

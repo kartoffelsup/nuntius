@@ -20,9 +20,9 @@ import io.github.kartoffelsup.nuntius.getIO
 import io.github.kartoffelsup.nuntius.ports.provided.UserService
 import io.github.kartoffelsup.nuntius.postIO
 import io.github.kartoffelsup.nuntius.userId
-import io.ktor.auth.authenticate
-import io.ktor.routing.Route
-import io.ktor.routing.route
+import io.ktor.server.auth.authenticate
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.route
 import kotlinx.serialization.builtins.serializer
 
 fun Route.user(userService: UserService) {

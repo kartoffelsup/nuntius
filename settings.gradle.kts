@@ -1,4 +1,4 @@
-rootProject.name = "web-msger"
+rootProject.name = "nuntius"
 include(
     "application",
     "domain",
@@ -11,6 +11,7 @@ include(
 
 includeBuild("../cmd-fp-test") {
     dependencySubstitution {
-        substitute(module("io.github.kartoffelsup:argparsing")).with(project(":modules:argparsing"))
+        substitute(module("io.github.kartoffelsup:argparsing"))
+            .using(project(":modules:argparsing"))
     }
 }

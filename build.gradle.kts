@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.5.0"
+    kotlin("jvm") version "1.7.21"
 }
 
 group = "io.github.kartoffelsup"
@@ -18,15 +18,24 @@ subprojects {
             mavenCentral()
         }
 
+        configurations.all {
+            resolutionStrategy.eachDependency {
+                if (requested.group == "org.slf4j" && requested.name == "slf4j-api") {
+                    useVersion("1.7.32")
+                    because("slf4j is weird and api >= 2 breaks logging")
+                }
+            }
+        }
+
         tasks {
             compileKotlin {
                 kotlinOptions {
-                    jvmTarget = "11"
+                    jvmTarget = "17"
                 }
             }
             compileTestKotlin {
                 kotlinOptions {
-                    jvmTarget = "11"
+                    jvmTarget = "17"
                 }
             }
         }

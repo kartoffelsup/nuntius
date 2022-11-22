@@ -1,73 +1,76 @@
 package view.form
 
-import kotlinx.html.InputType
-import kotlinx.html.id
-import kotlinx.html.js.onBlurFunction
-import kotlinx.html.js.onChangeFunction
-import kotlinx.html.js.onFocusFunction
-import org.w3c.dom.HTMLInputElement
-import react.RBuilder
-import react.RHandler
-import react.RProps
-import react.ReactElement
-import react.child
-import react.dom.div
-import react.dom.input
-import react.dom.label
-import react.functionalComponent
+import csstype.ClassName
+import react.FC
+import react.Props
+import react.StateSetter
+import react.dom.html.InputType
+import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.input
+import react.dom.html.ReactHTML.label
 import react.useState
 
-external interface FormFieldProps : RProps {
+external interface FormFieldProps : Props {
     var name: String
     var inputType: InputType
     var label: String
     var classes: String?
     var validate: (String) -> String
     var value: String
-    var setValue: (String) -> Unit
+    var setValue: StateSetter<String>
 }
 
-private val formField = functionalComponent<FormFieldProps> { props ->
+val FormField = FC<FormFieldProps> { props ->
     val (focused, setFocused) = useState(false)
-    val (validationMessage: String, setValidationMessage: (value: String) -> Unit) = useState("")
+    val (validationMessage: String, setValidationMessage: StateSetter<String>) = useState("")
     val isValid = validationMessage.isEmpty()
-    div(classes = "${props.classes ?: ""} mdc-text-field mdc-text-field--outlined ${if (focused) "mdc-text-field--focused" else ""} ${if (isValid) "" else "mdc-text-field--invalid"}") {
-        input(name = props.name, classes = "mdc-text-field__input", type = props.inputType) {
-            attrs {
-                id = props.name
-                onChangeFunction = { event ->
-                    props.setValue((event.target as HTMLInputElement).value)
-                    setValidationMessage(props.validate((event.target as HTMLInputElement).value))
-                }
-                onFocusFunction = {
-                    setFocused(true)
-                }
-                onBlurFunction = {
-                    setFocused(false)
-                }
-                required = true
+
+    div {
+        className =
+            ClassName("${props.classes ?: ""} mdc-text-field mdc-text-field--outlined ${if (focused) "mdc-text-field--focused" else ""} ${if (isValid) "" else "mdc-text-field--invalid"}")
+        input {
+            name = props.name
+            className = ClassName("mdc-text-field__input")
+            type = props.inputType
+            id = props.name
+            required = true
+            onChange = { event ->
+                props.setValue(event.target.value)
+                setValidationMessage(props.validate(event.target.value))
+            }
+            onFocus = {
+                setFocused(true)
+            }
+            onBlur = {
+                setFocused(false)
             }
         }
-        div(classes = "mdc-notched-outline ${if (props.value.isNotEmpty() || focused) "mdc-notched-outline--notched" else ""}") {
-            div(classes = "mdc-notched-outline__leading") {}
-            div(classes = "mdc-notched-outline__notch ${if (focused) "mdc-text-field--focused" else ""}") {
-                label(classes = "mdc-floating-label ${if (props.value.isNotEmpty() || focused) "mdc-floating-label--float-above" else ""} ") {
-                    attrs {
-                        htmlFor = props.name
-                    }
+        div {
+            className =
+                ClassName("mdc-notched-outline ${if (props.value.isNotEmpty() || focused) "mdc-notched-outline--notched" else ""}")
+            div {
+                className = ClassName("mdc-notched-outline__leading")
+            }
+            div {
+                className = ClassName("mdc-notched-outline__notch ${if (focused) "mdc-text-field--focused" else ""}")
+                label {
+                    className =
+                        ClassName("mdc-floating-label ${if (props.value.isNotEmpty() || focused) "mdc-floating-label--float-above" else ""} ")
+                    htmlFor = props.name
                     +props.label
                 }
             }
-            div(classes = "mdc-notched-outline__trailing") {}
+            div {
+                className = ClassName("mdc-notched-outline__trailing")
+            }
         }
     }
-    div(classes = "mdc-text-field-helper-line") {
-        div(classes = "mdc-text-field-helper-text mdc-text-field-helper-text--persistent mdc-text-field-helper-text--validation-msg") {
+    div {
+        className = ClassName("mdc-text-field-helper-line")
+        div {
+            className =
+                ClassName("mdc-text-field-helper-text mdc-text-field-helper-text--persistent mdc-text-field-helper-text--validation-msg")
             +validationMessage
         }
     }
-}
-
-fun RBuilder.formField(handler: RHandler<FormFieldProps>): ReactElement {
-    return child(formField, handler = handler)
 }

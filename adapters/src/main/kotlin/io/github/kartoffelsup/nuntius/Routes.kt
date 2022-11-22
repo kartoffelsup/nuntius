@@ -9,20 +9,20 @@ import io.github.kartoffelsup.nuntius.message.message
 import io.github.kartoffelsup.nuntius.ports.provided.MessageService
 import io.github.kartoffelsup.nuntius.ports.provided.UserService
 import io.github.kartoffelsup.nuntius.user.user
-import io.ktor.application.Application
-import io.ktor.application.ApplicationCall
-import io.ktor.application.call
-import io.ktor.auth.authenticate
-import io.ktor.auth.authentication
-import io.ktor.auth.jwt.JWTPrincipal
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.request.receiveText
-import io.ktor.response.respond
-import io.ktor.response.respondText
-import io.ktor.routing.Route
-import io.ktor.routing.route
-import io.ktor.routing.routing
+import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.call
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.authentication
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.request.receiveText
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
 import kotlinx.serialization.KSerializer
 
 fun Application.routes(userService: UserService, messageService: MessageService) {
@@ -36,7 +36,7 @@ fun Application.routes(userService: UserService, messageService: MessageService)
     }
 }
 
-suspend fun extractPrincipal(call: ApplicationCall): Either<NuntiusException, JWTPrincipal> {
+fun extractPrincipal(call: ApplicationCall): Either<NuntiusException, JWTPrincipal> {
     return call.authentication.principal<JWTPrincipal>()
         .rightIfNotNull { NuntiusException.NotAuthorizedException("Unauthorized.") }
 }

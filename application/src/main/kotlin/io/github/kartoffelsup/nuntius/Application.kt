@@ -1,7 +1,7 @@
 package io.github.kartoffelsup.nuntius
 
 import arrow.core.Either
-import arrow.core.computations.either
+import arrow.core.continuations.either
 import arrow.core.getOrHandle
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.common.eventbus.EventBus
@@ -26,15 +26,18 @@ import io.github.kartoffelsup.nuntius.notification.FirebaseClient
 import io.github.kartoffelsup.nuntius.ports.provided.MessageService
 import io.github.kartoffelsup.nuntius.user.UserRepositoryImpl
 import io.github.kartoffelsup.nuntius.user.UserServiceImpl
-import io.ktor.application.install
-import io.ktor.auth.Authentication
-import io.ktor.auth.jwt.JWTPrincipal
-import io.ktor.auth.jwt.jwt
-import io.ktor.features.AutoHeadResponse
-import io.ktor.features.CallLogging
+import io.ktor.server.application.install
+import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.autohead.AutoHeadResponse
+import io.ktor.server.plugins.callloging.CallLogging
+import io.ktor.server.plugins.cors.routing.CORS
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import javax.sql.DataSource
 import kotlin.system.exitProcess
@@ -61,10 +64,10 @@ suspend fun main(args: Array<String>): Unit {
 
     embeddedServer(Netty, 8080) {
         install(AutoHeadResponse)
-//        install(CORS) {
-//            host("localhost:9000")
-//            header("content-type")
-//        }
+        install(CORS) {
+            allowHost("localhost:9000")
+            allowHeader("content-type")
+        }
         install(Authentication) {
             jwt {
                 realm = "nuntius"
@@ -99,7 +102,10 @@ private suspend fun config(args: Array<String>): Pair<DataSource, FirebaseOption
             it.initializationFailTimeout = 1
         })
 
-        val serviceAccount = FileInputStream(fb)
+        val serviceAccount = withContext(Dispatchers.IO) {
+            FileInputStream(fb)
+        }
+
         val options = FirebaseOptions.builder()
             .setCredentials(serviceAccount.use { GoogleCredentials.fromStream(it) })
             .setDatabaseUrl(fbUrl)
@@ -118,4 +124,3 @@ class DeliverEvent(private val messageService: MessageService) {
     fun onNotificationRegistered(notificationTokenRegisteredEvent: NotificationTokenRegisteredEvent) =
         runBlocking { messageService.onNotificationRegistration(notificationTokenRegisteredEvent) }
 }
-

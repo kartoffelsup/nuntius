@@ -1,29 +1,28 @@
 package view
 
+import csstype.ClassName
 import io.github.kartoffelsup.nuntius.client.NuntiusApiService
 import kotlinx.coroutines.CoroutineScope
-import react.RBuilder
-import react.RComponent
-import react.RProps
-import react.RState
-import react.dom.div
-import react.router.dom.browserRouter
+import react.FC
+import react.Props
+import react.dom.html.ReactHTML.div
 import service.user.UserService
-import view.nav.sidebar
+import view.nav.Sidebar
 
-interface ApplicationProps : RProps {
+interface ApplicationProps : Props {
     var coroutineScope: CoroutineScope
     var nuntiusApi: NuntiusApiService
     var userService: UserService
 }
 
-class App : RComponent<ApplicationProps, RState>() {
-    override fun RBuilder.render() {
-        browserRouter {
-            div(classes = "container") {
-                sidebar(props.coroutineScope, props.nuntiusApi, props.userService) {
-                }
-            }
+val App = FC<ApplicationProps> { props ->
+    div {
+        className = ClassName("container")
+        Sidebar {
+            coroutineScope = props.coroutineScope
+            nuntiusApi = props.nuntiusApi
+            userService = props.userService
         }
     }
 }
+

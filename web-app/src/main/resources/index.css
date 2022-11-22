@@ -1,0 +1,67 @@
+body {
+    --mdc-theme-primary: #0087EE;
+    --mdc-theme-text-icon-on-background: #0087EE;
+    --mdc-theme-secondary: #43DA03;
+    --mdc-theme-background:  white;
+    --mdc-theme-surface: white;
+    --mdc-theme-on-primary: white;
+    --mdc-theme-on-secondary: black;
+    --mdc-theme-on-surface: black;
+    --mdc-theme-error: #B00020;
+}
+
+@media only screen and (min-width: 901px) {
+    .container {
+        display: grid;
+        grid-template-rows: 98vh;
+        grid-template-columns: 15vw 80vw;
+        grid-template-areas: """
+                             sidebar main
+                             """;
+    }
+}
+
+@media only screen and (max-width: 900px) {
+    .container {
+        display: grid;
+        grid-template-rows: 20vh 80vh;
+        grid-template-columns: 85vw;
+        grid-template-areas:
+            """
+            sidebar
+            main
+            """;
+    }
+}
+
+.main {
+    grid-area: auto;
+}
+
+.sidebar {
+    grid-area: auto;
+    min-height: 100%;
+    border: 0.5px solid #000000;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    max-width: 30vw;
+    justify-content: space-between;
+
+    * {
+        flex = 1.0;
+        margin = 5px;
+    }
+
+    .form-submit {
+        max-width: 50%;
+        min-width: 30%;
+    }
+
+    .form-login-error {
+        min-width: 30%;
+        color: var(--mdc-theme-error)
+    }
+}
