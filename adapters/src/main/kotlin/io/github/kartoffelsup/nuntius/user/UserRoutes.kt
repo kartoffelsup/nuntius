@@ -1,6 +1,5 @@
 package io.github.kartoffelsup.nuntius.user
 
-import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.getOrElse
 import io.github.kartoffelsup.nuntius.NuntiusException
@@ -14,7 +13,6 @@ import io.github.kartoffelsup.nuntius.api.user.result.UserContacts
 import io.github.kartoffelsup.nuntius.createJwt
 import io.github.kartoffelsup.nuntius.dtos.Email
 import io.github.kartoffelsup.nuntius.dtos.Password
-import io.github.kartoffelsup.nuntius.dtos.UserId
 import io.github.kartoffelsup.nuntius.dtos.Username
 import io.github.kartoffelsup.nuntius.getIO
 import io.github.kartoffelsup.nuntius.ports.provided.UserService
@@ -64,9 +62,8 @@ fun Route.user(userService: UserService) {
                 requestSerializer = UpdateNotificationTokenRequest.serializer(),
                 resultSerializer = String.serializer()
             ) { notificationTokenRequest, call ->
-                val userId: Either<NuntiusException, UserId> = userId(call)
-                userId.flatMap {
-                    userService.updateToken(it to notificationTokenRequest.token)
+                userId(call).flatMap {userId ->
+                    userService.updateToken(userId to notificationTokenRequest.token)
                         .mapLeft { message: String ->
                             NuntiusException.NotFoundException(message)
                         }
@@ -77,12 +74,11 @@ fun Route.user(userService: UserService) {
                 "/contacts",
                 UserContacts.serializer()
             ) { call ->
-                val userId: Either<NuntiusException, UserId> = userId(call)
-                userId.map {
-                    UserContacts(userService.findContacts(it).map { it.toList() }
+                userId(call).map { userId ->
+                    UserContacts(userService.findContacts(userId).map { it.toList() }
                         .getOrElse { listOf() }
-                        .map {
-                            UserContact(it.user.uuid.value, it.user.username.value)
+                        .map { contact ->
+                            UserContact(contact.user.uuid.value, contact.user.username.value)
                         }
                     )
                 }
