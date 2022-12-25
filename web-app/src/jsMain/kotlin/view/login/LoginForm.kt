@@ -2,7 +2,6 @@ package view.login
 
 import csstype.ClassName
 import io.github.kartoffelsup.nuntius.api.user.result.FailedLogin
-import io.github.kartoffelsup.nuntius.api.user.result.LoginResult
 import io.github.kartoffelsup.nuntius.api.user.result.SuccessfulLogin
 import jsonx
 import kotlinx.browser.localStorage
@@ -40,18 +39,12 @@ val LoginForm = FC<LoginFormProps> { props ->
     val (formSubmit, setFormSubmit) = useState(FormSubmit())
     val (loginError, setLoginError) = useState("")
 
-    val login: suspend () -> LoginResult = suspend {
-        val mail = formSubmit.email!!
-        val password = formSubmit.password!!
-        props.userService.login(mail, password)
-    }
-
     useEffect(listOf(formSubmit)) {
         var ignore: Boolean = false
         if (formSubmit.submit) {
             setLoginError("")
             props.coroutineScope.launch {
-                val result = login()
+                val result = props.userService.login(formSubmit.email!!, formSubmit.password!!)
                 if (!ignore) {
                     when (result) {
                         is SuccessfulLogin -> {
@@ -136,16 +129,11 @@ val LoginForm = FC<LoginFormProps> { props ->
                     }
                 }
             }
-            div {
-                className = ClassName("form-login-error mdc-theme--error")
-                +loginError
-            }
             button {
                 className = ClassName("form-submit mdc-button mdc-button--unelevated demo-button-shaped")
                 type = ButtonType.button
                 disabled = !formValid// || formSubmit.submit
                 onClick = {
-                    console.log("onClick")
                     setFormSubmit(FormSubmit(email, password, true))
                 }
                 span {
@@ -159,6 +147,10 @@ val LoginForm = FC<LoginFormProps> { props ->
                     className = ClassName("mdc-button__label")
                     +"Submit"
                 }
+            }
+            div {
+                className = ClassName("form-login-error mdc-theme--error")
+                +loginError
             }
         }
     }

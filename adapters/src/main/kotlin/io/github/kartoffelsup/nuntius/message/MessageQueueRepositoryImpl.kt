@@ -2,8 +2,9 @@ package io.github.kartoffelsup.nuntius.message
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
-import arrow.core.Option
-import arrow.core.rightIfNotNull
+import arrow.core.left
+import arrow.core.right
+import arrow.core.toNonEmptyListOrNull
 import com.querydsl.sql.SQLQueryFactory
 import io.github.kartoffelsup.nuntius.dtos.Message
 import io.github.kartoffelsup.nuntius.dtos.MessageId
@@ -34,7 +35,7 @@ class MessageQueueRepositoryImpl(
         return findOne(messageId)
     }
 
-    override suspend fun findQueuedMessages(userId: UserId): Option<NonEmptyList<Pair<MessageId, Message>>> {
+    override suspend fun findQueuedMessages(userId: UserId): NonEmptyList<Pair<MessageId, Message>>? {
         val messages = sqlQueryFactory.select(messageQueue)
             .from(messageQueue)
             .where(messageQueue.recipient.eq(userId.value))
@@ -46,7 +47,7 @@ class MessageQueueRepositoryImpl(
                 )
             }
 
-        return NonEmptyList.fromList(messages)
+        return messages.toNonEmptyListOrNull()
     }
 
     override suspend fun remove(messageId: MessageId) {
@@ -56,12 +57,12 @@ class MessageQueueRepositoryImpl(
     }
 
     private suspend fun findOne(messageId: MessageId): Either<String, QueuedMessage> {
-        return sqlQueryFactory.select(messageQueue)
+        return (sqlQueryFactory.select(messageQueue)
             .from(messageQueue)
             .where(messageQueue.messageId.eq(messageId.value))
             .fetch()
             .firstOrNull()
-            .rightIfNotNull { "Unable to find a queued message with id: $messageId" }
+            ?.right() ?: "Unable to find a queued message with id: $messageId".left())
             .map { bean ->
                 QueuedMessage(
                     MessageId(bean.messageId),

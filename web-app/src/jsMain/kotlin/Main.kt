@@ -10,7 +10,7 @@ import view.App
 
 val jsonx: Json by lazy { Json }
 
-val mainScope = MainScope()
+private val mainScope = MainScope()
 
 private class Application {
     private val nuntiusApi: NuntiusApiService = NuntiusApiService("http://localhost:8080", NuntiusHttpClient(), jsonx)

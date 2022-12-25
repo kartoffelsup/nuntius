@@ -3,6 +3,7 @@ package io.github.kartoffelsup.nuntius.user
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.Option
+import arrow.core.flatMap
 import arrow.core.left
 import arrow.core.right
 import io.github.kartoffelsup.nuntius.Sha512Hashed
@@ -36,7 +37,10 @@ class UserServiceImpl(
     override suspend fun createUser(request: Triple<Password, Email, Username>): Either<String, User> {
         val (pass, email, username) = request
         val hashedPw: Sha512Hashed = hashPw(pass, email)
-        return userRepository.saveUser(Triple(Password(hashedPw.payload), email, username))
+        return userRepository.findUser(username, email)
+            .map { "User with that name or email already exists" }
+            .swap()
+            .flatMap { userRepository.saveUser(Triple(Password(hashedPw.payload), email, username)) }
     }
 
     override suspend fun updateToken(request: Pair<UserId, String>): Either<String, NotificationToken> {

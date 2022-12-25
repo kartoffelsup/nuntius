@@ -1,7 +1,6 @@
 package io.github.kartoffelsup.nuntius.message
 
 import arrow.core.NonEmptyList
-import arrow.core.Option
 import io.github.kartoffelsup.nuntius.dtos.Message
 import io.github.kartoffelsup.nuntius.dtos.MessageId
 import io.github.kartoffelsup.nuntius.dtos.UserId
@@ -14,7 +13,7 @@ class MessageQueueServiceImpl(private val messageQueueRepository: MessageQueueRe
         messageQueueRepository.save(message)
     }
 
-    override suspend fun findQueuedMessages(userId: UserId): Option<NonEmptyList<Pair<MessageId, Message>>> {
+    override suspend fun findQueuedMessages(userId: UserId): NonEmptyList<Pair<MessageId, Message>>? {
         return messageQueueRepository.findQueuedMessages(userId)
     }
 

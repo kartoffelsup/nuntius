@@ -3,7 +3,8 @@ package io.github.kartoffelsup.nuntius
 import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.flatten
-import arrow.core.rightIfNotNull
+import arrow.core.left
+import arrow.core.right
 import io.github.kartoffelsup.nuntius.dtos.UserId
 import io.github.kartoffelsup.nuntius.message.message
 import io.github.kartoffelsup.nuntius.ports.provided.MessageService
@@ -38,13 +39,13 @@ fun Application.routes(userService: UserService, messageService: MessageService)
 
 fun extractPrincipal(call: ApplicationCall): Either<NuntiusException, JWTPrincipal> {
     return call.authentication.principal<JWTPrincipal>()
-        .rightIfNotNull { NuntiusException.NotAuthorizedException("Unauthorized.") }
+        ?.right() ?: NuntiusException.NotAuthorizedException("Unauthorized.").left()
 }
 
 suspend fun userId(call: ApplicationCall): Either<NuntiusException, UserId> {
     return extractPrincipal(call).flatMap { principal: JWTPrincipal ->
         principal.payload.getClaim("id").asString()?.let { UserId(it) }
-            .rightIfNotNull { NuntiusException.NotAuthorizedException("Invalid token.") }
+            ?.right() ?: NuntiusException.NotAuthorizedException("Invalid token.").left()
     }
 }
 
@@ -59,9 +60,9 @@ fun <A, B> Route.postIO(
         resultSerializer,
         method = HttpMethod.Post,
         body = { request: A?, call: ApplicationCall ->
-            request?.let {
+            (request?.let {
                 body(request, call)
-            }.rightIfNotNull { IllegalStateException("Request was null.") }
+            }?.right() ?: IllegalStateException("Request was null.").left())
                 .flatten()
         }
     )
@@ -90,9 +91,9 @@ private inline fun <A, B> Route.routeIO(
     route(path, method) {
         handle {
             val requestBean: Either<Throwable, A?> = requestSerializer?.let {
-                call.receiveText().takeIf { it.isNotBlank() }
+                (call.receiveText().takeIf { it.isNotBlank() }
                     ?.let { Either.catch { json.decodeFromString(requestSerializer, it) } }
-                    .rightIfNotNull { IllegalArgumentException("A valid json body is required.") }
+                    ?.right() ?: IllegalArgumentException("A valid json body is required.").left())
                     .flatten()
             } ?: Either.Right(null)
 
@@ -120,6 +121,8 @@ sealed class NuntiusException(val statusCode: HttpStatusCode) : RuntimeException
     abstract override val message: String
 
     class NotFoundException(override val message: String) : NuntiusException(statusCode = HttpStatusCode.NotFound)
+
+    class UserExistsException(override val message: String) : NuntiusException(statusCode = HttpStatusCode.BadRequest)
     class NotAuthorizedException(override val message: String) :
         NuntiusException(statusCode = HttpStatusCode.Unauthorized)
 }

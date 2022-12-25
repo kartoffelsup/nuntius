@@ -26,7 +26,7 @@ apply {
 }
 
 plugins {
-    kotlin("plugin.serialization") version "1.7.21"
+    kotlin("plugin.serialization") version "1.9.10"
 }
 
 dependencies {
@@ -36,6 +36,8 @@ dependencies {
     val firebaseAdminVersion: String by rootProject.extra
     val kotlinxSerializationVersion: String by rootProject.extra
     val javaxAnnotationApiVersion: String by rootProject.extra
+    val junitVersion: String by rootProject.extra
+    val mockkVersion: String by rootProject.extra
 
     api("io.arrow-kt:arrow-core:$arrowVersion")
     api("io.arrow-kt:arrow-fx-coroutines:$arrowVersion")
@@ -54,6 +56,12 @@ dependencies {
     api("com.querydsl:querydsl-sql:$queryDslVersion")
     api(project(":ports"))
     api(project(":api"))
+
+    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
+    testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+    testImplementation(project(":client"))
 }
 
 val generatedSourcesPath = file("src/generated/kotlin")

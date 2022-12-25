@@ -1,6 +1,8 @@
 *.iml
 .idea
 build
-.gradle
 generated
 /*/**/*adminsdk*.json
+out
+gradle
+.gradle

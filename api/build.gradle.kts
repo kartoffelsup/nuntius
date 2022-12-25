@@ -1,6 +1,6 @@
 plugins {
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version ("1.7.21")
+    kotlin("plugin.serialization") version ("1.9.10")
     id("maven-publish")
 }
 
@@ -17,9 +17,11 @@ kotlin {
             version = "0.0.1-SNAPSHOT"
         }
     }
+
     js {
         browser()
     }
+
     sourceSets {
         val kotlinxSerializationVersion: String by rootProject.extra
 

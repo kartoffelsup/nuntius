@@ -1,6 +1,6 @@
 package io.github.kartoffelsup.nuntius.message
 
-import arrow.core.continuations.either
+import arrow.core.raise.either
 import io.github.kartoffelsup.nuntius.NuntiusException
 import io.github.kartoffelsup.nuntius.api.message.request.SendMessageRequest
 import io.github.kartoffelsup.nuntius.api.message.result.SendMessageResult
@@ -22,13 +22,15 @@ fun Route.message(userService: UserService, messageService: MessageService) {
             body = { request, call ->
                 either {
                     val senderId = userId(call).bind()
-                    val recipientId = request.recipient
                     val sender: User = userService.findUser(senderId)
                         .mapLeft { NuntiusException.NotFoundException(it) }
                         .bind()
+
+                    val recipientId = request.recipient
                     val recipient: User = userService.findUser(UserId(recipientId))
                         .mapLeft { NuntiusException.NotFoundException(it) }
                         .bind()
+
                     val message = Message(
                         request.text,
                         sender,

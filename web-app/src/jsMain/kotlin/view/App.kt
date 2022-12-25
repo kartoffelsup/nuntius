@@ -9,7 +9,7 @@ import react.dom.html.ReactHTML.div
 import service.user.UserService
 import view.nav.Sidebar
 
-interface ApplicationProps : Props {
+external interface ApplicationProps : Props {
     var coroutineScope: CoroutineScope
     var nuntiusApi: NuntiusApiService
     var userService: UserService

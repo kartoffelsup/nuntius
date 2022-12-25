@@ -17,8 +17,9 @@ import react.router.dom.NavLink
 import service.user.UserService
 import view.Home
 import view.login.LoginForm
+import view.register.RegisterForm
 
-interface SidebarProps : Props {
+external interface SidebarProps : Props {
     var coroutineScope: CoroutineScope
     var nuntiusApi: NuntiusApiService
     var userService: UserService
@@ -59,12 +60,34 @@ val Sidebar = FC<SidebarProps> { props ->
                         }
                     }
                 }
+                NavLink {
+                    to = "/view/signup"
+                    className = ClassName("mdc-ripple-upgraded mdc-ripple-upgraded--background-focused")
+                    li {
+                        className = ClassName("mdc-list-item")
+                        span {
+                            className = ClassName("mdc-list-item__graphic material-icons")
+                            +"assignment"
+                        }
+                        span {
+                            className = ClassName("\"mdc-list-item__text\"")
+                            +"Sign Up"
+                        }
+                    }
+                }
             }
         }
         Routes {
             Route {
                 path = "/view/login"
                 element = LoginForm.create() {
+                    coroutineScope = props.coroutineScope
+                    userService = props.userService
+                }
+            }
+            Route {
+                path = "/view/signup"
+                element = RegisterForm.create() {
                     coroutineScope = props.coroutineScope
                     userService = props.userService
                 }

@@ -35,11 +35,11 @@ class MessageServiceImpl(
     override suspend fun onNotificationRegistration(notificationTokenRegisteredEvent: NotificationTokenRegisteredEvent) {
         val user = notificationTokenRegisteredEvent.notificationToken.userId
         val messages = messageQueueService.findQueuedMessages(user)
-        messages.fold({}, {
+        messages?.let {
             it.toList().forEach { idToMessage ->
                 sendMessage(idToMessage.second)
                 messageQueueService.remove(idToMessage.first)
             }
-        })
+        }
     }
 }

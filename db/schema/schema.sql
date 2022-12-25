@@ -5,7 +5,7 @@ CREATE TABLE nuntius_user (
     email varchar(32) UNIQUE not null,
     created_at timestamptz not null,
     last_login timestamptz
-)
+);
 
 CREATE TABLE user_contact (
     user_id character(36) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE user_contact (
         REFERENCES nuntius_user (uuid),
     FOREIGN KEY(contact_id)
         REFERENCES nuntius_user (uuid)
-)
+);
 
 CREATE TABLE user_notification (
     user_id character(36) PRIMARY KEY,
@@ -25,7 +25,7 @@ CREATE TABLE user_notification (
 
         FOREIGN KEY(user_id)
             REFERENCES nuntius_user (uuid)
-)
+);
 
 CREATE TABLE message_queue (
     message_id character(36) primary key,
@@ -38,4 +38,4 @@ CREATE TABLE message_queue (
         REFERENCES nuntius_user (uuid),
     FOREIGN KEY(sender)
         REFERENCES nuntius_user (uuid)
-)
+);

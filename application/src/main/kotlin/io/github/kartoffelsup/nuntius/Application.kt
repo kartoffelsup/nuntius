@@ -1,8 +1,7 @@
 package io.github.kartoffelsup.nuntius
 
-import arrow.core.Either
-import arrow.core.continuations.either
-import arrow.core.getOrHandle
+import arrow.core.getOrElse
+import arrow.core.raise.either
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
@@ -43,14 +42,13 @@ import javax.sql.DataSource
 import kotlin.system.exitProcess
 
 suspend fun main(args: Array<String>): Unit {
-    val (ds: DataSource, options: FirebaseOptions) = config(args)
-    val queryFactory =
-        SQLQueryFactory(Configuration(PostgreSQLTemplates()).apply {
-            register("user", "created_at", JSR310ZonedDateTimeType())
-            register("user", "last_login", JSR310ZonedDateTimeType())
-            register("user_notification", "updated_at", JSR310ZonedDateTimeType())
-            register("message_queue", "time_of_server_arrival", JSR310ZonedDateTimeType())
-        }, ds)
+    val (dataSource: DataSource, options: FirebaseOptions) = config(args)
+    val queryFactory = SQLQueryFactory(Configuration(PostgreSQLTemplates()).apply {
+        register("user", "created_at", JSR310ZonedDateTimeType())
+        register("user", "last_login", JSR310ZonedDateTimeType())
+        register("user_notification", "updated_at", JSR310ZonedDateTimeType())
+        register("message_queue", "time_of_server_arrival", JSR310ZonedDateTimeType())
+    }, dataSource)
 
 
     val firebase = FirebaseApp.initializeApp(options)
@@ -87,7 +85,7 @@ suspend fun main(args: Array<String>): Unit {
 
 private suspend fun config(args: Array<String>): Pair<DataSource, FirebaseOptions> {
     val argParser = ArgParser(args)
-    val c: Either<ArgParserError, Pair<DataSource, FirebaseOptions>> = either {
+    return either {
         val user = argParser.value("dbu".shortOption(), "database-user".longOption()).bind()
         val db = argParser.value("db".shortOption(), "database".longOption()).bind()
         val dbHost = argParser.value("dbh".shortOption(), "database-host".longOption()).bind()
@@ -95,7 +93,7 @@ private suspend fun config(args: Array<String>): Pair<DataSource, FirebaseOption
         val fb = argParser.value("fb".shortOption(), "firebase-config-file".longOption()).bind()
         val fbUrl = argParser.value("fburl".shortOption(), "firebase-url".longOption()).bind()
 
-        val ds = HikariDataSource(HikariConfig().also {
+        val dataSource = HikariDataSource(HikariConfig().also {
             it.jdbcUrl = "jdbc:postgresql://$dbHost/$db"
             it.username = user
             it.password = pw
@@ -111,9 +109,8 @@ private suspend fun config(args: Array<String>): Pair<DataSource, FirebaseOption
             .setDatabaseUrl(fbUrl)
             .build()
 
-        ds to options
-    }
-    return c.getOrHandle { err: ArgParserError ->
+        dataSource to options
+    }.getOrElse { err: ArgParserError ->
         System.err.println(err.message)
         exitProcess(1)
     }
@@ -122,5 +119,5 @@ private suspend fun config(args: Array<String>): Pair<DataSource, FirebaseOption
 class DeliverEvent(private val messageService: MessageService) {
     @Subscribe
     fun onNotificationRegistered(notificationTokenRegisteredEvent: NotificationTokenRegisteredEvent) =
-        runBlocking { messageService.onNotificationRegistration(notificationTokenRegisteredEvent) }
+        runBlocking(Dispatchers.IO) { messageService.onNotificationRegistration(notificationTokenRegisteredEvent) }
 }

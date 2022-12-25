@@ -3,11 +3,11 @@ package io.github.kartoffelsup.nuntius.user
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.Option
+import arrow.core.left
 import arrow.core.right
-import arrow.core.rightIfNotNull
 import arrow.core.toNonEmptyListOrNull
 import arrow.core.toOption
-import com.querydsl.core.types.dsl.LiteralExpression
+import com.querydsl.core.types.Predicate
 import com.querydsl.sql.SQLQueryFactory
 import io.github.kartoffelsup.nuntius.dtos.Contact
 import io.github.kartoffelsup.nuntius.dtos.Email
@@ -23,14 +23,17 @@ import io.github.kartoffelsup.nuntius.sql.QUserContact.userContact
 import io.github.kartoffelsup.nuntius.sql.QUserNotification.userNotification
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 
 class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRepository {
     override suspend fun findUserById(id: UserId): Either<String, User> =
-        findUser(nuntiusUser.uuid, id.value)
+        findUser(nuntiusUser.uuid.eq(id.value))
 
     override suspend fun findUserByEmail(email: Email): Either<String, User> =
-        findUser(nuntiusUser.email, email.value)
+        findUser(nuntiusUser.email.eq(email.value))
+
+    override suspend fun findUser(username: Username, email: Email): Either<String, User> =
+        findUser(nuntiusUser.username.eq(username.value).or(nuntiusUser.email.eq(email.value)))
 
     override suspend fun saveUser(pwMailUsername: Triple<Password, Email, Username>): Either<String, User> {
         val (pw, mail, username) = pwMailUsername
@@ -53,7 +56,7 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
             .fetch()
             .firstOrNull()
             ?.let { NotificationToken(UserId(it.userId), it.token, it.updatedAt) }
-            .rightIfNotNull { "Unable to find a Token for user: '$id'" }
+            ?.right() ?: "Unable to find a Token for user: '$id'".left()
     }
 
     override suspend fun updateToken(userId: UserId, token: String): Either<String, NotificationToken> {
@@ -102,13 +105,12 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
         return result.toNonEmptyListOrNull().toOption()
     }
 
-    private suspend fun <T : Comparable<T>> findUser(
-        path: LiteralExpression<T>,
-        value: T
+    private suspend fun findUser(
+        predicate: Predicate,
     ): Either<String, User> {
         return sqlQueryFactory.select(nuntiusUser)
             .from(nuntiusUser)
-            .where(path.eq(value))
+            .where(predicate)
             .fetch()
             .map {
                 User(
@@ -122,6 +124,6 @@ class UserRepositoryImpl(private val sqlQueryFactory: SQLQueryFactory) : UserRep
                 }
             }
             .firstOrNull()
-            .rightIfNotNull { "User with '$path=$value' not found." }
+            ?.right() ?: "User not found.".left()
     }
 }

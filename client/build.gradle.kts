@@ -1,6 +1,6 @@
 plugins {
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version ("1.7.21")
+    kotlin("plugin.serialization") version ("1.9.10")
     id("maven-publish")
 }
 
@@ -14,7 +14,7 @@ kotlin {
         mavenPublication {
             artifactId = "nuntius-api-client-jvm"
             groupId = "io.github.kartoffelsup"
-            version = "0.0.2-SNAPSHOT"
+            version = "0.0.3-SNAPSHOT"
         }
     }
     js {
@@ -33,6 +33,7 @@ kotlin {
                 api("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+                api(project(":api"))
             }
         }
         val jvmMain by getting {

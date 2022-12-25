@@ -14,6 +14,7 @@ import io.github.kartoffelsup.nuntius.dtos.Username
 interface UserRepository {
     suspend fun findUserById(id: UserId): Either<String, User>
     suspend fun findUserByEmail(email: Email): Either<String, User>
+    suspend fun findUser(username: Username, email: Email): Either<String, User>
     suspend fun saveUser(pwMailUsername: Triple<Password, Email, Username>): Either<String, User>
     suspend fun findUserNotificationToken(id: UserId): Either<String, NotificationToken>
     suspend fun updateToken(userId: UserId, token: String): Either<String, NotificationToken>
